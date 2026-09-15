@@ -1,0 +1,27 @@
+# Credentials never live in this repository. The real keys file sits outside
+# the project folder; keys.env.example only shows its shape.
+.env*
+*.env
+!keys.env.example
+
+# Local data: one database file per environment, never shared.
+data/
+
+# Per-machine Claude Code state.
+.claude/settings.local.json
+CLAUDE.local.md
+.claude/worktrees/
+.claude/logs/
+
+# Browser tool and test output.
+.playwright-mcp/
+test-results/
+playwright-report/
+
+# Raw provider captures, before they are trimmed into test recordings.
+recordings-raw/
+
+# Builds and dependencies.
+node_modules/
+dist/
+.deploy/

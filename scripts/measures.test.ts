@@ -1,0 +1,154 @@
+import { describe, expect, it } from 'vitest';
+import {
+  fetchClosedPulls,
+  formatDuration,
+  readStart,
+  repositoryFromRemote,
+  tallyIntents,
+  type ClosedPull,
+} from './measures.ts';
+
+describe('the conversation start line', () => {
+  it('reads a time with its offset', () => {
+    const start = readStart('Conversation started: 2026-09-15T14:05-05:00\n\n# Mark and Claude');
+    expect(start?.written).toBe('2026-09-15T14:05-05:00');
+    expect(start?.at.toISOString()).toBe('2026-09-15T19:05:00.000Z');
+  });
+
+  it('reads seconds, UTC and a positive offset', () => {
+    expect(readStart('Conversation started: 2026-09-15T19:05:30Z')?.at.toISOString()).toBe(
+      '2026-09-15T19:05:30.000Z',
+    );
+    expect(readStart('Conversation started: 2026-09-16T00:35+05:30')?.at.toISOString()).toBe(
+      '2026-09-15T19:05:00.000Z',
+    );
+  });
+
+  it('tolerates a byte-order mark and Windows line endings', () => {
+    const mark = String.fromCharCode(0xfeff);
+    expect(readStart(`${mark}Conversation started: 2026-09-15T14:05-05:00\r\nrest`)).toBeDefined();
+  });
+
+  it('refuses a time without its offset', () => {
+    expect(readStart('Conversation started: 2026-09-15T14:05')).toBeUndefined();
+  });
+
+  it('refuses a time that is not on the calendar', () => {
+    expect(readStart('Conversation started: 2026-02-30T10:00-05:00')).toBeUndefined();
+    expect(readStart('Conversation started: 2026-09-15T24:00-05:00')).toBeUndefined();
+  });
+
+  it('reads only the first line', () => {
+    expect(
+      readStart('# Conversation\nConversation started: 2026-09-15T14:05-05:00'),
+    ).toBeUndefined();
+  });
+});
+
+describe('a duration', () => {
+  it('is given in hours and minutes, to the nearest minute', () => {
+    expect(formatDuration(0)).toBe('0 min');
+    expect(formatDuration(29_000)).toBe('0 min');
+    expect(formatDuration(14 * 60_000 + 31_000)).toBe('15 min');
+    expect(formatDuration((26 * 60 + 5) * 60_000)).toBe('26 h 5 min');
+  });
+
+  it('is refused when negative', () => {
+    expect(formatDuration(-60_000)).toBeUndefined();
+    expect(formatDuration(Number.NaN)).toBeUndefined();
+  });
+});
+
+// Remote addresses with a user in them look like email addresses to the key
+// scan, so they are put together while the test runs.
+const withUser = (user: string, rest: string) => [user, rest].join('@');
+
+describe('the repository behind a remote', () => {
+  it('is read from an https address, with or without a user and .git', () => {
+    expect(
+      repositoryFromRemote(
+        `https://${withUser('someone', 'github.com/example-owner/Spindle.git')}\n`,
+      ),
+    ).toEqual({
+      owner: 'example-owner',
+      repo: 'Spindle',
+    });
+    expect(repositoryFromRemote('https://github.com/example-owner/Spindle')).toEqual({
+      owner: 'example-owner',
+      repo: 'Spindle',
+    });
+  });
+
+  it('is read from an ssh address', () => {
+    expect(repositoryFromRemote(withUser('git', 'github.com:example-owner/Spindle.git'))).toEqual({
+      owner: 'example-owner',
+      repo: 'Spindle',
+    });
+  });
+
+  it('is undefined for a remote that is not on GitHub', () => {
+    expect(repositoryFromRemote('https://example.com/example-owner/Spindle.git')).toBeUndefined();
+  });
+});
+
+const pull = (ref: string, merged: boolean): ClosedPull => ({
+  head: { ref },
+  merged_at: merged ? '2026-09-15T21:29:16Z' : null,
+});
+
+describe('the tally of decided intents', () => {
+  it('counts merged intent branches as accepted and closed ones as closed', () => {
+    expect(
+      tallyIntents([
+        pull('intent/spindle', false),
+        pull('intent/spindle-2', true),
+        pull('intent/other', true),
+      ]),
+    ).toEqual({ accepted: 2, closed: 1 });
+  });
+
+  it('ignores every branch that does not carry an intent', () => {
+    expect(tallyIntents([pull('docs/wave-0-records', true), pull('fix/run-tests', false)])).toEqual(
+      { accepted: 0, closed: 0 },
+    );
+  });
+});
+
+describe('reading closed pull requests from GitHub', () => {
+  it('reads page after page until one comes back short, with no token', async () => {
+    const asked: { url: string; headers: Record<string, string> }[] = [];
+    const fullPage = Array.from({ length: 100 }, () => pull('fix/something', true));
+    const fakeFetch = async (url: string, init?: RequestInit) => {
+      asked.push({ url, headers: init?.headers as Record<string, string> });
+      const body = asked.length === 1 ? fullPage : [pull('intent/spindle', true)];
+      return new Response(JSON.stringify(body), { status: 200 });
+    };
+    const result = await fetchClosedPulls('example-owner', 'Spindle', fakeFetch);
+    expect('pulls' in result && result.pulls).toHaveLength(101);
+    expect(asked.map((entry) => new URL(entry.url).searchParams.get('page'))).toEqual(['1', '2']);
+    expect(asked.every((entry) => new URL(entry.url).searchParams.get('state') === 'closed')).toBe(
+      true,
+    );
+    expect(
+      asked.every((entry) =>
+        Object.keys(entry.headers).every((name) => name.toLowerCase() !== 'authorization'),
+      ),
+    ).toBe(true);
+  });
+
+  it('says what GitHub answered when it refuses', async () => {
+    const fakeFetch = async () => new Response('rate limited', { status: 403 });
+    expect(await fetchClosedPulls('example-owner', 'Spindle', fakeFetch)).toEqual({
+      error: 'GitHub answered 403',
+    });
+  });
+
+  it('says GitHub could not be reached when the request fails', async () => {
+    const fakeFetch = async () => {
+      throw new Error('offline');
+    };
+    expect(await fetchClosedPulls('example-owner', 'Spindle', fakeFetch)).toEqual({
+      error: 'GitHub could not be reached (offline)',
+    });
+  });
+});

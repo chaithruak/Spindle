@@ -1,0 +1,46 @@
+{
+  "name": "spindle",
+  "version": "0.0.0",
+  "description": "One chat window for any model, built in public as a worked example of an AI-native software lifecycle.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "packages/proxy",
+    "packages/adapters"
+  ],
+  "scripts": {
+    "prepare": "node scripts/prepare.ts",
+    "dev": "concurrently --names api,web --kill-others \"npm run dev -w @spindle/api\" \"npm run dev -w @spindle/web\"",
+    "test": "vitest run",
+    "lint": "eslint . --max-warnings 0 && prettier --check .",
+    "build": "tsc -p tsconfig.json && npm run build --workspaces --if-present",
+    "checks": "node scripts/checks.ts",
+    "evals": "node -e \"console.error('npm run evals is not built yet, so nothing ran.'); process.exit(1)\"",
+    "record": "node -e \"console.error('npm run record is not built yet, so nothing ran.'); process.exit(1)\"",
+    "smoke": "node scripts/smoke.ts",
+    "deploy": "node -e \"console.error('npm run deploy is not built yet, so nothing ran.'); process.exit(1)\"",
+    "watch": "node -e \"console.error('npm run watch is not built yet, so nothing ran.'); process.exit(1)\"",
+    "replay": "node -e \"console.error('npm run replay is not built yet, so nothing ran.'); process.exit(1)\"",
+    "loop": "node -e \"console.error('npm run loop is not built yet, so nothing ran.'); process.exit(1)\"",
+    "measures": "node scripts/measures.ts",
+    "wording-check": "node scripts/wording-check.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.4",
+    "concurrently": "^10.0.5",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^5.0.1",
+    "yaml": "^2.9.1"
+  }
+}

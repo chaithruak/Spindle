@@ -1,0 +1,51 @@
+{
+  "roles": [
+    {
+      "id": "product-owner",
+      "name": "Rahul",
+      "title": "product owner",
+      "gate": "Accepted - Rahul, product owner",
+      "owns": [
+        "intent/",
+        ".claude/skills/write-intent/",
+        "plugins/house-policies/skills/ux/",
+        "plugins/house-policies/skills/brand/"
+      ]
+    },
+    {
+      "id": "tech-lead",
+      "name": "Linda",
+      "title": "tech lead and release manager",
+      "gate": "Accepted - Linda, tech lead and release manager",
+      "owns": [
+        "CLAUDE.md",
+        ".claude/",
+        ".claude/skills/write-intent/",
+        "REVIEW.md",
+        ".github/workflows/"
+      ]
+    },
+    {
+      "id": "engineer",
+      "name": "Marcus",
+      "title": "engineer",
+      "gate": "Accepted - Marcus, engineer",
+      "duties": "Steers Claude Code, approves the build plan and marks the pull request ready for review.",
+      "owns": []
+    },
+    {
+      "id": "security-lead",
+      "name": "Security lead",
+      "title": "security lead",
+      "gate": "Accepted - Security lead",
+      "owns": ["plugins/house-policies/skills/security/"]
+    },
+    {
+      "id": "compliance-lead",
+      "name": "Compliance lead",
+      "title": "compliance lead",
+      "gate": "Accepted - Compliance lead",
+      "owns": ["plugins/house-policies/skills/compliance/"]
+    }
+  ]
+}

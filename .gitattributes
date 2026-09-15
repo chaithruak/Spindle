@@ -1,3 +1,7 @@
 # One line ending everywhere, so a byte comparison means the same thing on
 # every machine and in CI.
 * text=auto eol=lf
+
+# Recorded provider replies are compared byte for byte, so git never touches
+# their line endings.
+**/recordings/** -text

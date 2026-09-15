@@ -1,0 +1,4 @@
+#!/bin/sh
+# Before every push: scan each commit on its way out, message included.
+# Git hands the refs being pushed to this hook on stdin; the scan reads them.
+exec node scripts/key-scan.ts --push

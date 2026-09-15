@@ -1,0 +1,5 @@
+#!/bin/sh
+# Before every commit: refuse credentials, access links and personal patterns,
+# then refuse wording lifted from the playbook copy or the hand-off.
+node scripts/key-scan.ts --staged || exit 1
+node scripts/wording-check.ts --staged || exit 1

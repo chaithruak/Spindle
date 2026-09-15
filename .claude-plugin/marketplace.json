@@ -1,0 +1,14 @@
+{
+  "name": "spindle",
+  "owner": {
+    "name": "Linda"
+  },
+  "description": "Spindle's house policies, read straight from this repository.",
+  "plugins": [
+    {
+      "name": "house-policies",
+      "source": "./plugins/house-policies",
+      "description": "The security, UX, compliance and brand policies every Spindle session follows."
+    }
+  ]
+}

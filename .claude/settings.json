@@ -1,0 +1,76 @@
+{
+  "model": "claude-opus-5",
+  "availableModels": ["claude-opus-5"],
+  "enforceAvailableModels": true,
+  "allowedMcpServers": [],
+  "enabledMcpjsonServers": [],
+  "autoMemoryEnabled": false,
+  "crossSessionInbound": "refuse",
+  "attribution": {
+    "sessionUrl": false
+  },
+  "env": {
+    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "0"
+  },
+  "permissions": {
+    "deny": ["Read(~/.claude/session-env/**)"]
+  },
+  "extraKnownMarketplaces": {
+    "spindle": {
+      "source": {
+        "source": "directory",
+        "path": "./"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "house-policies@spindle": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.ts\" token model"
+          }
+        ]
+      },
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.ts\" note"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.ts\" end",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostModelSwitch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.ts\" model"
+          }
+        ]
+      }
+    ]
+  }
+}

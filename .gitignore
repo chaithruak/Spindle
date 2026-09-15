@@ -12,6 +12,7 @@ data/
 CLAUDE.local.md
 .claude/worktrees/
 .claude/logs/
+.claude/launch.json
 
 # Browser tool and test output.
 .playwright-mcp/

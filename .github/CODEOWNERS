@@ -1,0 +1,28 @@
+# Example: replace this with your company's own. See docs/make-it-yours.md.
+#
+# One account stands behind every role in this teaching project, so each line
+# below names that one account. The role a path belongs to is written in the
+# role comment above it. config/roles.json is the roster, and npm run checks
+# fails whenever this file and the roster disagree.
+
+# role: product-owner
+/intent/ @chaithruak
+
+# role: tech-lead
+/CLAUDE.md @chaithruak
+/.claude/ @chaithruak
+/REVIEW.md @chaithruak
+/.github/workflows/ @chaithruak
+
+# role: product-owner, tech-lead
+/.claude/skills/write-intent/ @chaithruak
+
+# role: security-lead
+/plugins/house-policies/skills/security/ @chaithruak
+
+# role: compliance-lead
+/plugins/house-policies/skills/compliance/ @chaithruak
+
+# role: product-owner
+/plugins/house-policies/skills/ux/ @chaithruak
+/plugins/house-policies/skills/brand/ @chaithruak

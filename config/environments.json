@@ -1,0 +1,23 @@
+{
+  "retentionDays": 30,
+  "environments": {
+    "development": {
+      "webPort": 3000,
+      "apiPort": 4000,
+      "dataDir": "data/development",
+      "cookieName": "spindle_development"
+    },
+    "staging": {
+      "webPort": 3100,
+      "apiPort": 4100,
+      "dataDir": "data/staging",
+      "cookieName": "spindle_staging"
+    },
+    "production": {
+      "webPort": 3200,
+      "apiPort": 4200,
+      "dataDir": "data/production",
+      "cookieName": "spindle_production"
+    }
+  }
+}

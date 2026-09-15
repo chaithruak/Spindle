@@ -1,0 +1,9 @@
+{
+  "name": "house-policies",
+  "version": "0.1.0",
+  "description": "The security, UX, compliance and brand policies every Spindle session follows.",
+  "author": {
+    "name": "Linda"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,3 @@
+# Copied into every worktree Claude Code makes, so a session working in a
+# worktree keeps the owner's isolation file. Only files git ignores are copied.
+.claude/settings.local.json

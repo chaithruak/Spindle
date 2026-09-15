@@ -1,0 +1,107 @@
+name: pipeline
+
+# Runs on every pull request and every push to main. No job here calls Claude.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  FORCE_COLOR: '0'
+  NO_COLOR: '1'
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install from the lockfile
+        run: npm ci
+
+      # Each step below runs its command, then copies what it printed into the
+      # check summary, and fails when the command failed.
+      - name: Build
+        run: |
+          status=0; npm run build > out.txt 2>&1 || status=$?; cat out.txt
+          { echo '### Build'; echo '```'; tail -n 40 out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - name: Lint
+        run: |
+          status=0; npm run lint > out.txt 2>&1 || status=$?; cat out.txt
+          { echo '### Lint'; echo '```'; tail -n 40 out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - name: Test
+        run: |
+          status=0; npm test > out.txt 2>&1 || status=$?; cat out.txt
+          { echo '### Test'; echo '```'; tail -n 40 out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - name: Scan for keys
+        run: |
+          status=0; node scripts/key-scan.ts --all > out.txt 2>&1 || status=$?; cat out.txt
+          { echo '### Key scan'; echo '```'; tail -n 40 out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - name: Repository checks
+        run: |
+          status=0; npm run checks > out.txt 2>&1 || status=$?; cat out.txt
+          { echo '### Repository checks'; echo '```'; tail -n 60 out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - name: Audit dependencies
+        run: |
+          status=0; npm audit --audit-level=high > out.txt 2>&1 || status=$?; cat out.txt
+          { echo '### Dependency audit'; echo '```'; tail -n 40 out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+  no-keys-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - name: Download the repository as an archive, without its history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir spindle
+          gh api "repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" > spindle.tar.gz
+          tar -xzf spindle.tar.gz -C spindle --strip-components=1
+          if [ -e spindle/.git ]; then echo 'The archive unexpectedly holds a .git folder.'; exit 1; fi
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: spindle/.nvmrc
+
+      - name: Install from the lockfile
+        working-directory: spindle
+        run: npm ci
+
+      - name: Start development with no keys, and check the page and /health answer
+        working-directory: spindle
+        run: |
+          status=0; npm run smoke > out.txt 2>&1 || status=$?; cat out.txt
+          { echo '### No-keys smoke'; echo '```'; tail -n 40 out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status

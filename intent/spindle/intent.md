@@ -117,5 +117,3 @@ Not included:
   rules do and do not allow us to send.
 - Which open model is "the open model"? Today one person uses one on NVIDIA's site;
   nobody has decided whether that is the one.
-
-  Status: accepted - Rahul, product owner

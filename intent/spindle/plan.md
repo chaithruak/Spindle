@@ -485,3 +485,113 @@ section with `Accepted - Linda, tech lead and release manager`, before the test
 file is changed. Accepting it means agreeing that the Windows lookups stay
 proven on Windows only for now, and that the owner commits and pushes the
 branch while Claude opens the pull request.
+
+---
+
+## 2026-09-15 — Wave 1: the measures script reads its first two measures
+
+**Gate role for this section:** Rahul, product owner.
+**Accepted:** 2026-09-15 — `Accepted - Rahul, product owner`, written by the
+owner in the Wave 1 session before any file in the list was written.
+**Co-signed:** 2026-09-15 — `Accepted - Linda, tech lead and release manager`,
+written by the owner in the same message, because the section changes
+`CLAUDE.md`, which CODEOWNERS gives to the tech lead.
+
+### Why this section exists
+
+Wave 1 builds nothing for the product: Mark's idea becomes
+`intent/spindle/intent.md`. But the wave adds two measures, and its done-check
+asks `npm run measures` to print the first of them. Today the script only says
+that no measure has data. In the Wave 1 session's plan mode the owner chose to
+build the two measures in the intent's own pull request, inside the draft
+commit, so that the pull request still shows two commits: the draft, then
+Rahul's status edit. The same choices settled two smaller points: the closed
+count comes from GitHub's public API with no token, and the README's status line
+moves to Stage 1 in the same commit.
+
+### The two measures
+
+1. **Conversation start to merged intent.** The start is the time on the first
+   line of `docs/1-plan/conversation.md`, written as
+   `Conversation started: 2026-09-15T14:05-05:00` (an ISO 8601 time with its
+   offset; a line without an offset is refused, not guessed). The end is the
+   author date of the commit on main that added `intent/spindle/intent.md`,
+   following main's first parents only. For a squash merge that date is the
+   merge time: on pull requests #1 and #2 the squash commit's author date and
+   GitHub's merge time agree to the second. Until the intent is on main, the
+   script says so and prints no figure. Which conversation belongs to which
+   intent is a short list at the top of the script, with one entry today.
+2. **Share of intents accepted rather than closed.** Every pull request whose
+   branch starts with `intent/` and that has been decided: merged counts as
+   accepted, closed without a merge counts as closed. A closed pull request
+   leaves no commit, so git alone cannot see it; the script reads the closed
+   pull requests from GitHub's REST API with an unauthenticated `fetch`, which
+   the repository being public allows. It reads no token and starts no program.
+   The account and repository come from the git remote. If GitHub cannot be
+   reached, or refuses, the script says so and prints no share.
+
+### Files this section will touch
+
+1. `scripts/measures.ts` — rewritten: small exported functions (read the start
+   line, format a duration, name the repository from a remote address, tally
+   decided intent pull requests) and a `main` that prints the report. Git is
+   reached through `git()` in `scripts/lib/repo.ts`.
+2. `scripts/measures.test.ts` — new: the start line accepted with an offset and
+   refused without one; a duration printed in hours and minutes, and a negative
+   one refused; the repository named from both remote shapes; the tally counting
+   merged and closed `intent/` pull requests and ignoring every other branch. No
+   test reaches the network: the fetch is handed in.
+3. `CLAUDE.md` — the one Commands line for `npm run measures`, so it names the
+   new healthy output.
+4. `intent/spindle/plan.md` — this section, and its Accepted line.
+
+Riding in the same draft commit, but not built by this section: the intent, the
+evidence under `docs/1-plan/`, the Stage 1 rows in `docs/make-it-yours.md`, and
+the README's status line.
+
+### The order
+
+This section first, and Rahul's acceptance before any file above is written.
+Then the tests and the script together, `npm test`, `npm run lint` and
+`npm run build`; then the `CLAUDE.md` line. The script can be built while the
+owner is in claude.ai, since nothing in it depends on the conversation's words.
+Its first real figure comes only after the merge.
+
+### Risks
+
+- **A script that reaches the network.** Only `npm run measures` does it, and
+  nothing in the pipeline runs that script. Offline, the second measure says it
+  could not reach GitHub rather than printing a share.
+- **GitHub allows 60 unauthenticated requests an hour.** One run makes one
+  request for each page of 100 closed pull requests, so that limit is far off.
+- **A stale local main.** The first measure reads the local `main`; until the
+  owner pulls after the merge, it still says the intent is not on main.
+- **The start time is a person's clock reading,** taken to the minute when the
+  first message is sent. `docs/1-plan/conversation.md` says how it was taken.
+- **The squash author date could stop matching the merge time** if GitHub
+  changes how it squashes. The proof below compares the two after this merge.
+- **A branch name is the convention.** A pull request that carries an intent on
+  a branch not starting with `intent/` is not counted. Rework after a close goes
+  on a new `intent/` branch, so a close and a later acceptance both count.
+
+### Proof
+
+- `npm test` passes with the new test file in it.
+- `npm run lint`, `npm run build` and `npm run checks` pass.
+- On the branch before the merge, `npm run measures` says the intent is not on
+  main yet, and that no intent pull request has been decided.
+- After the merge and a pull on main, `npm run measures` prints the time from
+  the conversation's first line to the squash commit's author date, and that
+  figure agrees with GitHub's merge time for the pull request to the minute.
+  The share reads 1 of 1 accepted, 0 closed.
+
+### What acceptance means
+
+Rahul accepts this section when Rahul agrees that the two measures are built
+inside the intent's pull request and its draft commit; that the start is the
+conversation file's first line and the end is the squash commit's author date
+on main; that the closed count comes from GitHub's public API with no token;
+and that each figure is printed only when its data exists. Acceptance is the
+comment `Accepted - Rahul, product owner`, written by the owner in the Wave 1
+session before any file in the list is written, and copied by Claude onto the
+Accepted line above. No pull request exists yet to hold it.

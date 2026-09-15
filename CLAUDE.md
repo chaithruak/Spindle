@@ -16,7 +16,7 @@ Each line ends on what healthy output looks like.
 - `npm run checks` ends with `checks: N passed, 0 failed, 0 skipped`.
 - `npm run wording-check` prints `wording-check: no matches (N files measured)`.
 - `npm run smoke` prints `smoke: with no keys file, the starter page and /health both answered.`
-- `npm run measures` prints `No measures have data yet.` and a pointer to the playbook map.
+- `npm run measures` prints `Spindle measures`, a line for each measure that is a figure or says why there is none yet, and a pointer to the playbook map.
 - `evals`, `record`, `deploy`, `watch`, `replay` and `loop` are not built yet; each exits 1 and says so.
 
 ## Conventions

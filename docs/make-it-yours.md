@@ -29,6 +29,11 @@ Either way, Spindle's records come with the files. They show how Spindle itself 
 | `docs/0-setup/sign-off.md` | 0 | Who signed Stage 0 for Spindle | Your own signers sign your copy |
 | `docs/0-setup/claude-md-init-draft.md` | 0 | The draft `/init` produced before `CLAUDE.md` was cut to a page | Evidence only; delete it once your own `CLAUDE.md` exists |
 | `NOTICE` | 0 | Says the screenshots under `docs/` fall outside the MIT grant | Keep it while you keep those screenshots |
+| `intent/spindle/intent.md` | 1 | The intent Spindle itself was built from, written with the template | Write your own product's intent; keep this one only as an example |
+| `docs/1-plan/sources.md` | 1 | The before-state notes the intent's Problem section was built from | Your own notes on how things stand today |
+| `docs/1-plan/conversation.md` | 1 | The conversation that produced the intent, start and end times included | Your own conversation, copied out the same way |
+| `docs/1-plan/evidence.md` | 1 | How each piece of Stage 1 evidence was made, and what is missing from it | Your own record; keep nothing you did not really do |
+| `docs/1-plan/connector-access.png` | 1 | Which repositories the installed Claude app reaches, with the account name covered | Your own connector's page, scrubbed the same way |
 
 ## 2. Repository settings to re-create
 

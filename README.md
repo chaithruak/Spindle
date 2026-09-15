@@ -1,6 +1,6 @@
 # Spindle
 
-**Status: Stage 0 of 6, set-up. The starter page and the API's `/health` run; the sign-in stand-in, the model picker and the chat path are not built yet.**
+**Status: Stage 1 of 6, plan. Spindle's intent is in `intent/spindle/intent.md`. The starter page and the API's `/health` run; the sign-in stand-in, the model picker and the chat path are not built yet.**
 
 Spindle is one chat window that can talk to any model, and it is being written in public as a worked example of an AI-native software lifecycle: how an idea is captured, specified, planned, built, tested, shipped and then watched, with a person deciding at every gate.
 

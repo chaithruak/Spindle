@@ -792,6 +792,54 @@ PowerShell window after Linda's approval.
 | Why | the tests build a fake Windows install and ask `run.ts` to find it with Windows paths, which only resolve on Windows; the runner is Linux. `run.ts` itself was not at fault |
 | What followed | Linda triaged it `Fix now` and accepted a dated fix section in `intent/spindle/plan.md`. The fix runs the Windows lookups only on Windows, adds their counterparts for other systems, and gives every other test a fake install shaped for the system running it: on the owner's machine, 36 tests, 34 passed and 2 skipped. Its pipeline run is recorded on the pull request that carries it |
 
+### After commit 1
+
+Recorded on 2026-09-15 by the sixth desktop session, from what the owner ran in
+a Start-menu PowerShell window on the owner's own `gh` sign-in, and from what
+this session could read back with the Spindle-only token.
+
+**The fix, merged.** Pull request #1 fixed the tests behind commit 1's red run.
+
+| Check | Result |
+|---|---|
+| The pull request's own pipeline run, its first | both jobs green. Test on Linux: 36 tests, 34 passed, 2 skipped. The key scan (`clean`, 76 files), the repository checks (10 passed, 0 failed, 0 skipped) and the audit (0 vulnerabilities) ran on GitHub for the first time |
+| Merge | squashed into `61e3408` on main at 19:22 UTC. GitHub put ` (#1)` after the title. The author is the owner's no-reply address and the committer is GitHub |
+| Co-author lines in the squash message | 2, both naming Claude: the one the description carried, and one GitHub added. No other name |
+| The pipeline run on main after the merge | green |
+| Who becomes author of a squash merge | for a pull request opened with the owner's own token and merged by the owner: the owner's no-reply address. This is **not** the case the brief asked about, a pull request opened by a workflow token, which stays "not the owner" as recorded above |
+| Linda's gate comment | the owner wrote it in this session before merging, but the pull request had **0 comments** when it merged. At the owner's request, Claude posted it from this session at 20:09 UTC, 47 minutes after the merge |
+
+**The repository settings.** Applied by the owner from `docs/repository-settings.md`.
+
+| Setting | Result |
+|---|---|
+| Main ruleset | created and active, bypass list empty, `current_user_can_bypass` `never`. Read back by Claude as the rules GitHub applies to main: `deletion`, `non_fast_forward`, `pull_request` with squash alone, `required_status_checks` with `pipeline`. GitHub added one parameter the settings file does not ask for, `require_extra_approval_for_unattributed_changes` set to `true`; what it changes is not measured |
+| Merging | from the owner's output: squash on, merge commits and rebase off, squash title and message from the pull request, auto-merge off |
+| Security | from the owner's checks: secret scanning and push protection `enabled` (both already were before the command ran), CodeQL default setup `configured`, automated security fixes `false`, private vulnerability reporting `true`, Dependabot alerts on |
+| Actions: read-only default, pull requests allowed, approval for outside contributors | applied; the owner reported it done. **Not read back**: the Spindle-only token gets HTTP 403, as it has no administration access |
+| The `claude` environment | read back by Claude: 1 required reviewer |
+| `CLAUDE_ENVIRONMENT_PROTECTED` | applied; **not read back**, HTTP 403 |
+| Interaction limit | applied; **not read back**, HTTP 403 |
+| The Security and quality tab | showed a count of **1** in the owner's view of the rules page, soon after CodeQL's default setup was switched on. What it counts was not checked |
+
+**A direct push to main, refused.** With nothing uncommitted, the owner made an
+empty throwaway commit on main and pushed it. GitHub refused it with `GH013`,
+naming two violations: changes must go through a pull request, and the
+`pipeline` check is required. The push ended `! [remote rejected] main -> main`.
+GitHub's main stayed at `61e3408`; `git reset --hard origin/main` removed the
+throwaway, and no branch contains it.
+
+**The rules page screenshot was not taken into the evidence.** The owner's first
+picture showed the account name in GitHub's top bar and was pasted into the
+session rather than saved as a file. After two rounds of instructions for
+cropping and saving it, the owner asked whether it was needed. Claude answered
+that it was not, since the rules read back as text and the refused push show the
+same thing. `docs/0-setup/` therefore holds no screenshot.
+
+**Now possible, not yet measured.** Commit 1 is on main, so the worktree rows in
+the table below no longer wait on the push; they wait on a fresh worktree
+session.
+
 ### Still to measure
 
 The fifth desktop session settled the Read deny, the PowerShell switch, the mode

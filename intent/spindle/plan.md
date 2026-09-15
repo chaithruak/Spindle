@@ -400,3 +400,88 @@ again and gathered the signatures. Its measurements are in
     claude.ai skills;
   - the Stop hook in a headless run, and PostModelSwitch in the app, as already
     carried to Wave 3 and to the first wave that allows a second model.
+
+---
+
+## 2026-09-15 — Wave 0, fix: the run helper's tests fail on Linux
+
+**Gate role for this section:** Linda, tech lead and release manager.
+**Triage:** 2026-09-15 — `Fix now - the pipeline has to be green before the
+rules for main require it`, written by the owner in the sixth desktop session.
+**Accepted:** 2026-09-15 — `Accepted - Linda, tech lead and release manager`,
+written by the owner in the same session, before the test file was changed.
+
+### What went wrong
+
+Commit 1 (`33e67a2`) went to main, and its first pipeline run failed in the
+`pipeline` job's Test step: 6 of 34 tests failed, all in
+`scripts/lib/run.test.ts`, while the same 34 pass on the owner's Windows
+machine. The steps after Test (the key scan, the repository checks and the
+dependency audit) never ran on GitHub. The `no-keys-smoke` job passed.
+
+The cause is in the tests, not in `scripts/lib/run.ts`. The tests build a fake
+Windows install on disk (`node.exe` beside `npm-cli.js`, and a `claude.cmd`
+with its `claude.exe`) and ask `run.ts` to find it as Windows would. `run.ts`
+joins Windows paths with backslashes, which is right on Windows. On the
+pipeline's Linux runner the fake files sit at forward-slash paths, so the
+backslash paths match nothing. Two tests exercise the Windows lookups
+themselves; three borrow the fake install only to check the headless marker;
+one checks that npm counts as available.
+
+### Files this section will touch
+
+1. `scripts/lib/run.test.ts` — the only code change:
+   - the two tests of Windows lookups (npm through `npm-cli.js`, and the
+     `claude.exe` behind `claude.cmd`) run only when the tests run on Windows;
+   - two matching tests for other systems (npm started by name, and `claude`
+     found on the PATH) run only when the tests do not run on Windows;
+   - the marker tests, the "leaves the mark off npm and node" test and the
+     "claude unavailable" test use a fake install shaped for the system the
+     tests are running on, so they run everywhere.
+2. `intent/spindle/plan.md` — this section, and its Triage and Accepted lines.
+3. `docs/0-setup/facts.md` — commit 1's push, its red pipeline run, and the
+   fix's pipeline run.
+
+`scripts/lib/run.ts` and `.github/workflows/pipeline.yml` are not changed.
+
+### The order
+
+Triage and acceptance first. Then the test change on a branch, `npm test`,
+`npm run lint`, `npm run checks` and `npm run wording-check` on the owner's
+machine; then the owner commits and pushes the branch, and Claude opens the
+pull request with `gh pr create`, filling in the template's fix fields. The
+owner applies the repository settings from `docs/repository-settings.md`
+before the pull request is merged, so the rule requiring the pipeline check is
+in force when it merges.
+
+### Risks
+
+- **The Windows lookups are proven only on Windows.** The pipeline runs on
+  Linux, so there those two tests show as skipped. Windows is covered by
+  `npm test` on the owner's machine and by the checks' spawn smoke, which
+  really starts `node`, `npm` and `claude` there. A Windows runner in the
+  pipeline would close that; it is not added here.
+- **Steps that have never run on GitHub may fail next.** The key scan, the
+  repository checks and the audit run on the pull request for the first time.
+  If one fails, the work stops and returns to Linda with what failed, rather
+  than widening this fix without a decision.
+- **Skipped tests could hide a test that never runs anywhere.** Each skipped
+  test has a partner that runs on the other kind of system, and the counts
+  below show both.
+
+### Proof
+
+- On the owner's Windows machine, `npm test`: 36 tests, 34 passed, 2 skipped.
+- On the pull request's pipeline run: every step of the `pipeline` job green,
+  its Test step showing 36 tests, 34 passed and 2 skipped; `no-keys-smoke`
+  green.
+- The pull request's fix fields name `33e67a2` as the red commit, the
+  `pipeline` job as the failing check, and the assertion message it printed.
+
+### What acceptance means
+
+Linda triages the red pipeline with `Fix now - <reason>`, and accepts this
+section with `Accepted - Linda, tech lead and release manager`, before the test
+file is changed. Accepting it means agreeing that the Windows lookups stay
+proven on Windows only for now, and that the owner commits and pushes the
+branch while Claude opens the pull request.

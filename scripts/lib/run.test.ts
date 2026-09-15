@@ -28,37 +28,60 @@ const claudeExe = touch(
 );
 const windows = { platform: 'win32' as const, execPath, env: { Path: `${nodeDir};${globalDir}` } };
 
+// Any other system's layout: claude found by name on a colon-separated PATH.
+const binDir = path.join(scratch, 'bin');
+const claudeBin = touch(path.join(binDir, 'claude'));
+const posix = { platform: 'linux' as const, execPath, env: { PATH: binDir } };
+
+// Windows paths only resolve on Windows, so the lookups are tested on the system
+// they belong to, and everything else uses the layout of the system running the tests.
+const onWindows = process.platform === 'win32';
+const host = onWindows ? windows : posix;
+const hostWithoutClaude = onWindows
+  ? { ...windows, env: { Path: nodeDir } }
+  : { ...posix, env: { PATH: path.join(scratch, 'empty') } };
+
 describe('prepare', () => {
-  it('starts npm on Windows through node and npm-cli.js, with no shell', () => {
+  it.runIf(onWindows)('starts npm on Windows through node and npm-cli.js, with no shell', () => {
     const prepared = prepare('npm', ['test'], windows);
     expect(prepared.file).toBe(execPath);
     expect(prepared.args[0]?.endsWith('npm-cli.js')).toBe(true);
     expect(prepared.args.slice(1)).toEqual(['test']);
   });
 
-  it('finds the claude.exe behind an npm-installed claude.cmd on Windows', () => {
+  it.runIf(onWindows)('finds the claude.exe behind an npm-installed claude.cmd on Windows', () => {
     expect(prepare('claude', ['--version'], windows).file).toBe(claudeExe);
   });
 
+  it.skipIf(onWindows)('starts npm by name on other systems, with no shell', () => {
+    const prepared = prepare('npm', ['test'], posix);
+    expect(prepared.file).toBe('npm');
+    expect(prepared.args).toEqual(['test']);
+  });
+
+  it.skipIf(onWindows)('finds claude on the PATH on other systems', () => {
+    expect(prepare('claude', ['--version'], posix).file).toBe(claudeBin);
+  });
+
   it('marks every claude run as headless, even when the caller tries to clear the mark', () => {
-    const plain = prepare('claude', ['-p', 'hello'], windows);
+    const plain = prepare('claude', ['-p', 'hello'], host);
     expect(plain.env[HEADLESS_MARKER]).toBe('1');
 
     const cleared = prepare('claude', ['-p', 'hello'], {
-      ...windows,
-      env: { ...windows.env, [HEADLESS_MARKER]: '' },
+      ...host,
+      env: { ...host.env, [HEADLESS_MARKER]: '' },
     });
     expect(cleared.env[HEADLESS_MARKER]).toBe('1');
   });
 
   it('leaves the mark off runs of npm and node', () => {
-    expect(prepare('npm', ['test'], windows).env[HEADLESS_MARKER]).toBeUndefined();
-    expect(prepare('node', ['--version'], windows).env[HEADLESS_MARKER]).toBeUndefined();
+    expect(prepare('npm', ['test'], host).env[HEADLESS_MARKER]).toBeUndefined();
+    expect(prepare('node', ['--version'], host).env[HEADLESS_MARKER]).toBeUndefined();
   });
 
   it('reports claude as unavailable when it cannot be found', () => {
-    expect(isAvailable('claude', { ...windows, env: { Path: nodeDir } })).toBe(false);
-    expect(isAvailable('npm', { ...windows, env: { Path: nodeDir } })).toBe(true);
+    expect(isAvailable('claude', hostWithoutClaude)).toBe(false);
+    expect(isAvailable('npm', hostWithoutClaude)).toBe(true);
   });
 });
 
@@ -74,8 +97,8 @@ describe('run and start', () => {
 
   it('hands the headless mark to the claude process it starts', async () => {
     const seen: SpawnOptions[] = [];
-    await run('claude', ['-p', 'hello'], { ...windows, spawnImpl: fakeSpawn(seen) });
-    start('claude', ['-p', 'hello'], { ...windows, spawnImpl: fakeSpawn(seen) });
+    await run('claude', ['-p', 'hello'], { ...host, spawnImpl: fakeSpawn(seen) });
+    start('claude', ['-p', 'hello'], { ...host, spawnImpl: fakeSpawn(seen) });
     expect(seen).toHaveLength(2);
     for (const options of seen) {
       expect(options.env?.[HEADLESS_MARKER]).toBe('1');

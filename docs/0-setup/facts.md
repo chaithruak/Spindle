@@ -778,6 +778,20 @@ starts `claude --version` as part of its Windows spawn test, so this session
 ran the command-line `claude` twice, once in the project and once in the copy,
 a few minutes after it opened.
 
+**Commit 1, pushed.** The owner committed and pushed from a Start-menu
+PowerShell window after Linda's approval.
+
+| Check | Result |
+|---|---|
+| `core.hooksPath` just before the commit | `.githooks`, so the commit went through the key scan and the wording check first |
+| The commit | `33e67a2`, 74 files, on main and on GitHub, with local main equal to `origin/main` |
+| Author | a GitHub no-reply address, the same kind as commit 0's; the repository sets it locally |
+| Remotes | 1, this repository |
+| A commit touching CODEOWNERS, which names the account | commit 1 itself touches it, and the key scan's personal patterns let it through |
+| The first pipeline run, on the push to main | **failed.** `no-keys-smoke` passed. In the `pipeline` job, Build and Lint passed and Test failed: 6 of 34 tests, all in `scripts/lib/run.test.ts`. The key scan, the repository checks and the audit did not run |
+| Why | the tests build a fake Windows install and ask `run.ts` to find it with Windows paths, which only resolve on Windows; the runner is Linux. `run.ts` itself was not at fault |
+| What followed | Linda triaged it `Fix now` and accepted a dated fix section in `intent/spindle/plan.md`. The fix runs the Windows lookups only on Windows, adds their counterparts for other systems, and gives every other test a fake install shaped for the system running it: on the owner's machine, 36 tests, 34 passed and 2 skipped. Its pipeline run is recorded on the pull request that carries it |
+
 ### Still to measure
 
 The fifth desktop session settled the Read deny, the PowerShell switch, the mode

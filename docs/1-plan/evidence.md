@@ -79,6 +79,29 @@ confirms all four analyst answers were written down. Nothing was reconstructed.
   each intent gets a folder named after itself. The owner kept the brief's path,
   `intent/spindle/intent.md`.
 
+## The status edit left a line nobody meant
+
+Rahul's status edit on pull request #3, commit `1e33ece`, changed two things rather than one.
+It set the header's `Status` line, and it also appended the gate phrase to the end of the file,
+indented, where it read as part of the last open question. The gate phrase belongs in the
+commit message and in the pull request comment, and it was in both; this third copy was not
+meant. It merged to main with the rest of the pull request, in `add7ce5`.
+
+The owner triaged it `Fix now` in the Wave 1 session. The stray line is removed in its own
+pull request, on a branch deliberately not named `intent/…`, because the measures script counts
+an `intent/` branch as a decided intent and this is a correction rather than a new one. Nothing
+else in the intent changed: the header still reads `Status: Accepted`, which is what Rahul
+wrote, and the intent's record stays its pull request page, where both the draft and the status
+edit can still be read.
+
+Two other things the merge showed, neither of them wrong:
+
+- **The squash commit's author date is the merge time**, as Wave 0 found on its own two
+  merges. Here it read one second before GitHub's own merge time, so the two agree to the
+  minute rather than to the second. The first measure uses that author date.
+- **The squash message carried two co-author lines**, both naming Claude: the one the
+  description held and one GitHub added from the draft commit's trailer. No third name.
+
 ## The GitHub connector and Code sessions
 
 After connecting GitHub to claude.ai, the owner asked whether it reaches a desktop Code

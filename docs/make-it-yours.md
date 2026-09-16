@@ -41,6 +41,7 @@ Either way, Spindle's records come with the files. They show how Spindle itself 
 | `docs/2-design/skills-present.md` | 2 | Proof that all four policies were loaded in the session that wrote the spec | Your own proof, taken the same way |
 | `docs/2-design/session-export.md` | 2 | The spec session's transcript, turned into Markdown and scrubbed | Your own session, scrubbed the same way |
 | `docs/2-design/evidence.md` | 2 | How each piece of Stage 2 evidence was made, and what is missing from it | Your own record; keep nothing you did not really do |
+| `docs/3-build/plan-cold-read.md` | 3 | Every round of the cold read of Spindle's Wave 3 plan, and what each round changed | Your own rounds, including the ones that found things; a record holding only the round that passed says nothing |
 
 ## 2. Repository settings to re-create
 

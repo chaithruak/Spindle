@@ -790,3 +790,1089 @@ here rather than tidied out of it.
    without the line the job could never see it, and the environment's required
    reviewer means a Run press asks the owner first. The runner guard still
    arrives in Wave 4.
+
+---
+
+## 2026-09-15 — Wave 3: three streams build the window, the adapters and the server
+
+**Intent:** `intent/spindle/intent.md`, accepted 2026-09-15 by Rahul, product
+owner, on pull request #3.
+**Spec:** `intent/spindle/spec.md`, merged 2026-09-15 in `a04e46b`.
+**Record:** none.
+**Gate role for this section:** Marcus, engineer.
+**Accepted:** 2026-09-16 — `Accepted - Marcus, engineer`, written by the owner in
+the Wave 3 plan session, before any file this section names for a stream was
+written and before the pull request existed to hold it.
+**Co-signed:** 2026-09-16 — `Accepted - Linda, tech lead and release manager`,
+written by the owner in the same message, because `worktree-server` names
+`packages/proxy/**` and `apps/api/src/sign-in.ts`, which this section classes as
+high risk.
+**Three things the gate settled**, each written into the section where it
+belongs: the shared table holds seven rows and not the brief's four; the recorder
+reads the keys file once the security policy's own commit says it may; and
+Rahul settles the brand policy's three owed strings before `worktree-web` opens.
+
+### Why this section exists
+
+The spec says what Spindle does. It does not say which files change, in what
+order, or who may touch what while three sessions work at once. Everything
+Wave 3 builds has no intent of its own beyond that spec, so it starts here.
+
+This section covers the three streams and this commit. It does **not** cover the
+build kit — the grown `CLAUDE.md`, the `provider-adapter` skill, the four hooks,
+the settings file and the two helper agents. The kit writes its own dated
+section in its own session, accepted by Linda before its first code commit. It
+is kept apart on purpose: the kit is what teaches the checks to police these
+three streams, and one section covering both would be planning the policeman and
+the traffic in the same breath.
+
+### The three streams
+
+Picked so that no file belongs to two of them.
+
+```
+worktree-web   worktree-adapters   worktree-server
+```
+
+Each stream works on the branch of that name. Each is an ordinary Local session
+on the project folder with the app's worktree option off, whose very first step
+is `EnterWorktree`.
+
+**The argument is the bare stem, not the branch name.** Wave 0 measured it:
+`EnterWorktree` called with `probe` made `.claude/worktrees/probe` on the branch
+`worktree-probe`, based on the tip of `origin/main` — it puts `worktree-` on the
+front itself. So the three calls take **`web`**, **`adapters`** and **`server`**,
+and passing `worktree-web` would give `worktree-worktree-web`. Every branch name
+elsewhere in this section is the full `worktree-<stem>`, because that is what
+`git` and the checks see.
+
+If it does not give that branch name on the day, the fallback is the app's own
+worktree option followed by `git branch -m worktree-<stem>`, and `docs/3-build/`
+records which of the two was used.
+
+No stream edits any section but its own, in this file or anywhere else.
+
+**A worktree arrives with no `node_modules`.** It is made from `origin/main`, and
+git never tracked one. Walking up the folders would find the main checkout's,
+because a worktree sits under `.claude/worktrees/`, and that is the trap: the
+workspace links inside it point back at the main checkout's `apps/` and
+`packages/`, so a stream would be testing the wrong copy of its own code without
+being told. So **each stream's second step, straight after `EnterWorktree`, is
+`npm ci`** in the worktree. `npm ci` installs exactly what the lockfile says and
+**never writes it**, failing instead if the lockfile and the manifests disagree —
+which is the guard this wave wants anyway. `npm install` is not used and is not
+allowed. The kit's allow list therefore carries `npm ci` as one more exact
+command; the brief's list does not name it, and it is named here because without
+it no stream can run a test before opening a pull request.
+
+**Three sessions cannot all have port 3000.** `apps/web/vite.config.ts` sets
+`strictPort: true` and the API binds the environment's port outright, so the
+second stream to run `npm run dev` fails rather than quietly moving. Only two
+streams need a running server at all: `worktree-web`, to photograph
+`screenshot.html`, and `worktree-server`, to run `npm run smoke`.
+
+**They take turns on 3000 and 4000, and neither moves to another environment.**
+`scripts/smoke.ts` loads `development` by name rather than from `SPINDLE_ENV`,
+and it is in no stream's paths, so sending a stream to staging would have it
+poll 3000 while its own servers came up on 3100 — failing, or worse, answering
+from the other worktree's code and recording a green smoke it never ran. Neither
+stream holds the ports for long: web wants them for the moment it takes a
+picture, server for one run of smoke, which gives up after ninety seconds and
+usually answers in a few. Each starts its server, does
+the one thing, and stops it. A stream that finds the port held waits rather than
+reaching for another environment, and a stream that leaves one held has made the
+other stream's next run a lie.
+
+### What a stream's paths are
+
+**The boundary is the path, not the numbered list below.** Each stream owns:
+
+| Stream | Its paths |
+|---|---|
+| `worktree-web` | `apps/web/**` |
+| `worktree-adapters` | `packages/adapters/**`, `scripts/record.ts`, `scripts/record.test.ts` |
+| `worktree-server` | `apps/api/**`, `packages/proxy/**` |
+
+plus that stream's own folders under `docs/3-build/`, its own section in this
+file, and whichever shared files its section names. The numbered lists that
+follow say what each stream builds inside its paths; they are not the fence. So
+when the server stream extends `apps/api/src/environment.ts` to hand out the
+retention figure — which it should, rather than copying the number into the
+store, which `CLAUDE.md` forbids — nothing about
+the fence is in the way. Its list names that file anyway, because it is work
+somebody has to do; a file the list had forgotten would be just as allowed.
+
+Nothing outside a stream's paths moves without the shared-file rule, and the
+kit's paths check is written against this table.
+
+### The contract between the window and the API
+
+`worktree-web` and `worktree-server` build the two halves of this, at the same
+time, sharing no file. The web pull request merges in this wave and the server's
+stays a draft until Wave 5, so nothing later reconciles two independently
+invented shapes. It is therefore fixed here, and a stream that wants to change
+it says so in its own section first.
+
+**Two spellings of every path, and they are not the same.** The page calls
+`/api/...`. `apps/web/vite.config.ts` proxies `/api` to the API port **and
+strips the prefix on the way**, so the API itself serves the bare path. That is
+already true of the one route that exists: `apps/web/src/App.tsx` fetches
+`/api/health`, `apps/api/src/server.ts` serves `/health`, and `scripts/smoke.ts`
+asks for both. The table below gives the API's own paths, bare. Read every one of
+them with `/api` in front when the page is the caller.
+
+Every failure, on every route, answers with exactly two fields — `error`, in the
+plain words requirement 9 allows on a page, and `code`, the short code for that
+request — and nothing else. The statuses are fixed too, because otherwise the
+page's fake-fetch tests and the API's supertest tests would each invent their
+own and both go green:
+
+```
+400  a body that is not the shape the route takes; an unknown modelId; a
+     modelId that is not selectable
+401  no cookie, a cookie the API does not know, or a wrong password
+404  an unknown conversation id — and a conversation saved under a different
+     stand-in name, which answers 404 rather than 403 so that nothing tells
+     the asker it exists
+502  a provider refused, or was unavailable
+500  anything else
+```
+
+**On the turn route a failure has two shapes, and the dividing line is the first
+chunk.** Anything that goes wrong before the stream opens — a bad body, no
+cookie, an unselectable model, a provider that refuses outright — is an ordinary
+non-200 JSON `{ error, code }`. Once the 200 and its `text/event-stream` header
+have gone out, nothing can change the status, so a failure after that point is
+`event: error` inside the stream and the status stays 200.
+
+```
+GET    /session
+       200 { "name" }            the stand-in name this cookie belongs to
+       401 { "error", "code" }   no cookie, or one the API does not know
+
+GET    /models
+       200 { "models": [ { "id", "label", "note", "selectable", "reason" } ] }
+       reason is "no-key", "terms-not-read", "both" or "unavailable", and is
+       left out when selectable is true. Five fields per model, never a sixth.
+       Answers whether or not anyone is signed in.
+
+POST   /sign-in       { "name", "password" }  ->  204, setting the cookie
+                                                  401 on a wrong password
+POST   /sign-out                              ->  204, clearing the cookie
+
+GET    /conversations
+       200 { "conversations": [ { "id", "title", "updatedAt" } ] }, newest first
+       title is the first turn's text cut to 60 characters, and an empty
+       string while the conversation has no turns. A row with an empty title
+       shows its date and nothing else, so no placeholder phrase is invented
+       for a screen — which no stream is allowed to do anyway.
+POST   /conversations                         ->  201 { "id" }
+GET    /conversations/:id
+       200 { "id", "turns": [ { "id", "author", "text", "writtenAt",
+                                "stopped" } ] }
+       author is "you" or a model's picker id, never a provider's name.
+       stopped is false on every turn but one that was stopped part-way.
+DELETE /conversations                         ->  204
+       Everything saved under the signed-in name, deleted rather than
+       archived. This is spec requirement 7's "delete my data sooner", and the
+       route is built in this wave rather than deferred. Whether the window
+       grows a control for it waits for Wave 5: the mock shows none, the ux
+       policy has not been asked, and until then the person running Spindle
+       calls the route, which is where looking after this already sits.
+
+POST   /conversations/:id/turns   { "modelId", "text" }
+       200 text/event-stream:
+         event: chunk   data: { "text" }
+         event: done    data: { "turnId", "stopped" }
+         event: error   data: { "error", "code" }
+       Stopping is the page closing the stream. The API keeps whatever text
+       had arrived, marks that turn stopped, and writes no error.
+```
+
+**Signed in or not** is settled by `GET /session` (`/api/session` from the
+page) and nothing else. The
+cookie is `HttpOnly`, `SameSite=Lax`, `Path=/`, and not `Secure`, because
+Spindle serves plain HTTP on the loopback address; the page therefore cannot read
+it and must ask. Every route but `/models`, `/sign-in` and `/health`
+answers **401** to a request with no valid cookie, and the page shows the
+sign-in view whenever it gets one.
+
+**Every time on the wire is an ISO 8601 string in UTC**, as
+`2026-09-15T22:16:41.000Z`. That covers `writtenAt` and `updatedAt`, and any time
+field a later wave adds. Nothing sends epoch milliseconds, and the page does the
+formatting.
+
+`/health` keeps its present shape, because `npm run smoke` measures it.
+
+### The contract between the router and an adapter
+
+`packages/adapters/src/index.ts` is `export {}` on main today, so nothing in
+`packages/proxy` can import a type from it until the adapters stream merges.
+Two things follow, and they are the order the server stream works in:
+
+- The server builds everything that needs no adapter type first — the store, the
+  sign-in, the sessions, the key reader, the logger, and the session, sign-in,
+  sign-out and conversation routes. All of that compiles against main as it
+  stands.
+- `router.ts`, `terms.ts`, **the models route** and the streamed turn route come
+  **last**, after the adapters pull request has merged and the server branch has
+  caught up. `terms.ts` is in this batch and not the first because it is typed
+  against `TermsFrom`, which `models.ts` exports: a bare list of strings would
+  let `'openrounter'` switch Claude off for ever with nothing to catch it, and
+  declaring `TermsFrom` a second time inside `packages/proxy` is the duplication
+  this section forbids. The models route is here for the same kind of reason —
+  the four labels live in `models.ts` and the selectable-and-reason decision
+  lives in `router.ts`. The server's draft pull request opens then, not
+  before, because `pipeline` is a required check on every pull request including
+  a draft and `npm run build` typechecks every workspace.
+
+So "Order of work" step 6, where the other two streams do not wait for the
+adapters to merge, is exact for `worktree-web` and half true for
+`worktree-server`: it does not wait to start, and it does wait to open. Nothing is declared twice, and no contract is
+duplicated into `packages/proxy` to get around the ordering.
+
+The contract is written down here all the same, because the server writes its
+tests and its route shapes against it long before it can import it.
+
+```
+Category   'no-key' | 'refused' | 'unavailable' | 'rate-limited'
+           | 'timed-out' | 'bad-request'
+
+AdapterError   thrown, never returned. Carries { category } and nothing
+               else: no raw body, no provider text, no key, and no code —
+               see below for why the code is not minted here.
+
+KeyAccessor    () => string | undefined
+               The router hands this in. An adapter never reads the
+               environment and never opens a file.
+
+Http           (url: string, init: RequestInit) => Promise<Response>
+               The one way an adapter reaches the network, handed in like the
+               key. Three callers hand in three of these: the router's is the
+               real fetch; the recorder's copies the status, the content type
+               and every body chunk on the way past; a test's replays a
+               recording. That is the seam, and it is the only one.
+
+Turn           { author: string, text: string }
+               author is a picker id or 'you', as requirement 4 asks.
+
+Request        { providerModelId: string, turns: Turn[], signal: AbortSignal }
+               The provider's own id, never a picker id. router.ts looks the
+               entry up in MODELS and passes providerModelId across; an
+               adapter never sees 'claude' or 'gpt' and never opens MODELS.
+Usage          { inputTokens: number, outputTokens: number }
+Chunk          { text: string, usage?: Usage }
+               Usage rides on the last chunk, whose text is empty. That is
+               the only way a streamed reply can carry it.
+Reply          { text: string, usage?: Usage }
+
+Adapter        { id: string
+                 send(request: Request, key: KeyAccessor, http: Http):
+                   Promise<Reply>
+                 stream(request: Request, key: KeyAccessor, http: Http):
+                   AsyncIterable<Chunk> }
+```
+
+**`category` and `code` are two different things, and they are minted in two
+different places.** `errors.ts` turns a status and a body into a **category**,
+which is a classification: the same failure always gives the same word. The
+**code** is a reference to one request — a short opaque string, different every
+time — and the spec asks for it so that "it failed at about four o'clock" becomes
+something anyone can look up. A classification cannot do that. So the API's
+failure path mints the code, once per failed request, shows it once on the page
+and writes it once in the log beside the category, the model, the provider and
+the time. `errors.ts` never sees it and `AdapterError` never carries it.
+
+**Both methods have a consumer, and both have a recording.** `stream` is what the
+turn route calls; it is the only route that reaches a provider. `send` is what
+the recorder calls for its non-streamed capture, so the interface the brief asks
+for is proved on both halves rather than one being written and never run. The
+recorder therefore takes two captures per provider — one streamed, one not — and
+`packages/adapters/recordings/` holds both.
+
+`packages/adapters/src/models.ts` exports exactly this, and the server's models
+route and router read it:
+
+```
+PickerId    'mock' | 'claude' | 'gpt' | 'nvidia'
+            The four ids the mock already uses.
+
+TermsFrom   'openrouter' | 'anthropic' | 'openai' | 'nvidia'
+            The four readings the spec's open question 1 owes, one per
+            provider, each unlocking its own models and nothing else.
+
+ModelEntry  { id: PickerId
+              label: string            the brand policy's word for word
+              note: string             its line under the label, likewise
+              adapter: 'mock' | 'openrouter' | 'nvidia'
+              termsFrom: readonly TermsFrom[]
+              providerModelId: string }
+              Mock carries the plain string mock, so no entry is ever null and
+              Request.providerModelId is a plain string everywhere.
+
+MODELS      readonly ModelEntry[], in the picker's order: mock, claude, gpt,
+            nvidia. The order in this array is the order on the screen.
+```
+
+**Where `unavailable` comes from.** The other three reasons fall out of `keys.ts`
+and `terms.ts`, and the fourth does not: it is for a key that is present and that
+the provider refused. `router.ts` keeps one note per model id, in memory and
+nowhere else: it is set when a call fails as `refused` with a key present, and it
+is cleared when the keys file's modified time changes or when the API restarts —
+the same moment `keys.ts` re-reads, so nothing has to be invalidated twice.
+`/models` reports `unavailable` while that note is set. Nothing about it is
+written to the store or to a log beyond the ordinary failure line, so it names
+nobody and survives no restart, which is what the spec's "switches off at the
+next availability check" means in practice.
+
+**`termsFrom` is why `adapter` is not enough.** The spec owes four readings, not
+three, and one OpenRouter reading must not unlock Claude and GPT together: Claude
+is `['openrouter', 'anthropic']`, GPT is `['openrouter', 'openai']`, NVIDIA is
+`['nvidia']`, and Mock is `[]`. `packages/proxy/src/terms.ts` holds the list of
+`TermsFrom` values that have actually been read — **today, none of them** — and
+`router.ts` calls a model selectable only when every one of that model's
+`termsFrom` is in it **and** its key is there. That keeps the model knowledge in
+one file, which is the rule this section set itself, and it puts the field in
+`models.ts` now rather than reopening a merged contract from the server side
+later.
+
+**The four labels and their lines live there and nowhere else.** The server sends
+them on `/api/models`; the page draws what it was sent and holds no label of its
+own. That keeps the brand policy's words in one file rather than three, in three
+pull requests that share none.
+
+### Files that change
+
+#### worktree-web — the chat window and the model picker
+
+1. `apps/web/src/App.tsx` — replaced. The window: the bar, the picker, the
+   thread, the composer, and the switch between the signed-out and the signed-in
+   view.
+2. `apps/web/src/SignIn.tsx` — new. The stand-in sign-in: an account name, the
+   one-time password the API prints at start-up, and a button reading
+   **Sign in (stand-in)**. It says in plain words that a name is treated as one
+   person, and that the password is shared by everyone using this copy.
+   **There is no mock for this view.** It is written from spec requirement 3 and
+   the ux policy, and the screenshot rounds do not cover it. That is a decision,
+   not a round that went missing.
+3. `apps/web/src/ModelPicker.tsx` — new. **A native `<select>` with `disabled`
+   options**, exactly as `design/chat-mock.html` has it, described by the note
+   paragraph beneath. Not a custom listbox: the mock is the thing every round is
+   measured against, a custom control could never match it, and a native select
+   is keyboard-reachable and screen-reader-announced without anyone building
+   that twice. A switched-off option reads `Label — reason`, the shape the mock
+   uses (`Claude — add a key: see keys.env.example; terms not read`), and the
+   note beneath shows the selected model's line. **The page holds no label of
+   its own** and decides no availability; the only words it owns are the ones for
+   the four switched-off reasons, and those are the brand policy's exactly.
+   **This stream cannot open until those words exist** — see "The wording this
+   wave is waiting on" below.
+4. `apps/web/src/Conversation.tsx` — new. The thread as a log region announced
+   to screen readers, every turn labelled with who wrote it.
+5. `apps/web/src/ConversationList.tsx` — new. Newest first, with the line saying
+   this history belongs to the stand-in name.
+6. `apps/web/src/Composer.tsx` — new. Enter sends, Shift and Enter start a new
+   line, and a way to stop a reply on its way that keeps whatever text had
+   arrived and marks it stopped.
+7. `apps/web/src/api.ts` — new. The one place the page talks to the API. It
+   calls the real routes the server stream is building. Through Wave 3 the API is
+   listening and answers 404 to every route the contract adds, since the server
+   is a draft; whether it is a 404 or a dead socket, `api.ts` returns the
+   plain-words state requirement 9 asks for and the window still draws.
+8. `apps/web/src/styles.css` — the mock's stylesheet becomes the app's: light
+   and dark, AA contrast in both, usable at 320 pixels wide, reduced motion
+   respected.
+9. `apps/web/src/FaceToggle.tsx` — new. The mock's own light-and-dark control,
+   which sits in the bar and overrides `prefers-color-scheme` for whoever
+   presses it. **It is real, not mock scenery**, because the bar is one of the
+   five things every screenshot round is measured over and a bar without it
+   could never match. Its two words, `Dark face` and `Light face`, come from
+   `design/chat-mock.html`, which Rahul accepted in Wave 2; the brand policy
+   does not cover them and nobody invents a third phrase for them here.
+10. `apps/web/index.html` — the title and the root element.
+11. `apps/web/src/*.test.tsx` and `apps/web/src/*.test.ts` — new. Each test file
+    that needs a DOM carries `// @vitest-environment jsdom` in its own head, so
+    the root `vitest.config.ts` never changes and never becomes a file two
+    streams want at once.
+12. `apps/web/src/screenshot.tsx` and `apps/web/screenshot.html` — new, and
+    development-only. See "What a screenshot round photographs" below.
+13. `docs/3-build/web/` and `docs/3-build/screenshot-rounds/` — this stream's
+    notes, and one image per round holding the mock beside the app together with
+    the written list of what still differs.
+14. `intent/spindle/plan.md` — the `worktree-web` section above, and nothing
+    else in the file, if the work departs from it.
+
+Shared files this stream may name: **the make-it-yours guide**, for the rows its
+own records under `docs/3-build/` create.
+
+**What a screenshot round photographs.** There is no API in this wave, so the
+real window shows the plain-words state that says the server is not answering,
+and photographing that against the mock would measure nothing. The rounds are
+therefore taken of `screenshot.html`, a second Vite entry that mounts the same
+components with the mock's own content passed straight in as props — the sample
+conversation, and the four picker entries with their labels, their lines and
+their switched-off reasons. It is not the stub this section rejected: `App.tsx`
+and `api.ts` are untouched, nothing in the shipped bundle imports it, and it
+exists to be photographed. The production build does not emit it, and
+`npm run build` proves that.
+
+**Those four picker entries are copied from `design/chat-mock.html`, not from
+`models.ts`, and that is not a second home for the brand policy's words.**
+`apps/web` cannot import `@spindle/adapters`: its manifest is frozen, and the
+barrel is `export {}` until the adapters merge, which is most of the time this
+stream runs. Nor should it —
+the harness's job is to reproduce the accepted mock so a picture can be compared
+with it, so the mock is the right source, and a round where the harness and the
+mock disagreed would be measuring the wrong thing. The rule that the labels live
+in `models.ts` and nowhere else is about **the product**: `ModelPicker.tsx`
+draws only what the API sent it, and there is no route from `screenshot.tsx`
+into anything the build ships.
+
+Playwright reaches it at `http://127.0.0.1:3000/screenshot.html`, which
+`.mcp.json` already allows.
+
+**What counts as a difference.** The mock shows the bar, the picker, the notice,
+the thread and the composer. Those are what a round's list is about, and what
+the owner's final comment is about. The window also has a conversation list, a
+way to stop a reply, a sign-out and the sign-in view, none of which the mock
+shows. Those are listed once, in the first round, under "in the app and not in
+the mock", and they are not differences that have to shrink to zero. Saying so
+here stops a later reader taking a list that never reached zero as a round that
+failed.
+
+**What a round cannot show.** `docs/2-design/evidence.md` already records that
+`design/chat-mock.png` shows the picker **closed**, so the three switched-off
+models and their reasons are inside it and not visible, and that opening a native
+select cannot be done from a picture. The rounds therefore measure the closed
+picker, which is what the mock shows. The switched-off wording — the thing this
+stream waits on the brand policy for — is proved by this stream's own tests
+instead, one per reason, and the evidence says so plainly rather than leaving a
+reader to assume a picture covered it.
+
+#### worktree-adapters — one interface, two providers and the mock
+
+1. `packages/adapters/src/adapter.ts` — new. The one interface: a send and a
+   stream, the request and reply shapes, and the error categories. A key reaches
+   an adapter only through the accessor the router hands in. No adapter reads
+   the environment, and no adapter opens a file.
+2. `packages/adapters/src/parse.ts` — new. The one parser both providers go
+   through: reading a streamed reply frame by frame, turning each frame into a
+   Spindle chunk, and picking up usage.
+3. `packages/adapters/src/errors.ts` — new. The one error mapper: a status and a
+   body become a **category**, and the raw body never travels with it. It mints
+   no code; the API does that, once per failed request.
+4. `packages/adapters/src/openrouter.ts` — new, thin. Serves Claude and GPT.
+5. `packages/adapters/src/nvidia.ts` — new, thin. Thinking switched off, usage
+   asked for.
+6. `packages/adapters/src/mock.ts` — new. Answers with no key at all.
+7. `packages/adapters/src/models.ts` — new, carrying the example note. The
+   pinned ids, the picker order, and which provider serves which. The ids are
+   checked against the providers' own catalogue pages on the day this stream
+   opens — by the owner, in the owner's own browser, and pasted in — because no
+   session in this build has outbound network reach and none is given any. The
+   starting points are `anthropic/claude-haiku-4.5` and `openai/gpt-5.6-luna` at
+   OpenRouter, and `nvidia/nemotron-3.5-lightning-30b-a3b` at NVIDIA. It also
+   holds the four labels and the four lines under them, copied word for word
+   from the brand policy, because they belong in one file rather than three. It
+   holds **no** notion of whether a model can be picked: a key it never sees,
+   and whether a provider's terms have been read is the server stream's to hold.
+   **The owner pastes more than the ids** — see "What the owner pastes, and why
+   nobody looks it up" below.
+8. `packages/adapters/src/index.ts` — the barrel.
+9. `packages/adapters/recordings/` — new. **Two trimmed recordings per
+   provider**, one from `stream` and one from `send`, so both halves of the
+   interface are proved against something real; four files in all. Each holds
+   the status, the content type and the body chunks, and nothing else.
+   **Written only by the recorder, which the owner runs outside the app.** No
+   session writes or edits a recording by hand: `protect-paths.ts` refuses it,
+   and no stream session holds the change ticket that would let it through. A
+   recording that needs changing is re-recorded.
+10. `packages/adapters/src/*.test.ts` — new. The tests push the recorded replies
+    back through the real parser. Where a recording is missing the test fails
+    outright; nothing falls back quietly.
+11. `scripts/record.ts` and `scripts/record.test.ts` — new. The recorder the
+    owner runs. It calls the real adapters, handing in an `Http` that copies the
+    status, the content type and every body chunk on the way past — which is why
+    the interface takes one. It writes that raw copy into `recordings-raw/`,
+    which git ignores, and the trimmed recording beside the tests. Identifiers
+    become fixed placeholders and the prompt is nothing but a greeting. **Where
+    it gets a key is not settled by this section** — see "The recorder needs a
+    key, and every written rule says no" below.
+
+    **It refuses to keep a capture that is not a 2xx**, and says which provider
+    and which status. Without that rule the recorder is happy to record a 404
+    from a mistyped model id, the test replays it faithfully, and the suite goes
+    green over a recording of a failure. That is the one way this wave could
+    produce evidence that is worse than none, and it costs one line to close.
+12. `docs/3-build/adapters/` — this stream's notes, including the date the ids
+    were read and what was on the page.
+13. `intent/spindle/plan.md` — the `worktree-adapters` section above, and
+    nothing else in the file, if the work departs from it.
+
+Shared files this stream may name: **the root manifest**, to point `record` at
+the real script instead of the stub that exits 1; **`.prettierignore`**, so that
+`prettier --check .` leaves the recordings alone; **`CLAUDE.md`**, whose Commands
+list says today that `record` is not built yet and would be wrong in the same
+pull request that builds it — the line becomes `npm run record` ending on what
+the recorder really prints, which with two captures from each of two providers
+is `record: 4 replies captured (openrouter, nvidia).`, and `record` leaves the
+list of scripts that exit 1; and **the make-it-yours guide**, for the row
+`packages/adapters/src/models.ts` needs in section 4, Keys and providers, and
+for the rows its own records under `docs/3-build/` create.
+
+**What the owner pastes, and why nobody looks it up.** `openrouter.ts`,
+`nvidia.ts`, `parse.ts` and `errors.ts` need each provider's HTTP surface: the
+address, the authorization header, the request body, and the shape of a streamed
+frame. None of that is in this repository, no session has outbound reach, and
+this section refuses to give one any. So it comes in the same paste as the model
+ids, from the same two catalogue and quickstart pages, in the same owner's turn.
+
+What the plan expects to be pasted back, so the stream starts from a proposition
+rather than from nothing: both providers serve an OpenAI-compatible
+`POST .../chat/completions`, authorized with `Authorization: Bearer <key>`,
+taking `{ model, messages: [{ role, content }], stream }`, and streaming
+`data:` frames carrying a delta of content, ending on a sentinel frame. If the
+paste says otherwise, the paste wins and `docs/3-build/adapters/` records the
+difference. `parse.ts` exists precisely because both providers are expected to
+speak the same shape; if they turn out not to, that is a departure and the
+stream's own section says so.
+
+**The recorder needs a key, and every written rule says no.** The brief has the
+owner run `npm run record` against the real providers. But
+`intent/spindle/spec.md` requirement 5 says "Only the API process reads that
+file", the security policy says "Only the API process reads keys", and this
+section makes `packages/proxy/src/keys.ts` the only reader — a file in a
+different stream, empty on this branch. Every route into a key is closed.
+
+Two ways out were put to the gate. **Settled on 2026-09-16 by Marcus: the first.**
+
+1. **Taken. The security policy gains one sentence, in a commit of its own gated
+   by the Security lead**, saying that the recorder also reads the keys file: a
+   development tool the owner runs by hand outside the app, never part of a
+   running Spindle, keeping nothing but the status, the content type and the
+   body chunks. The spec's requirement 5 is owed the same sentence whenever the
+   spec is next opened, and this section records that debt rather than anyone
+   editing the spec here. Reading that file is what every other part of Spindle
+   does, and it can be tested.
+2. **Not taken.** The recorder would have read no file, asking for each key on a
+   hidden prompt with nothing stored anywhere. No policy would have changed — at
+   the cost of the owner handling key material by hand at a moment when they
+   would not otherwise have to, by a path with no test behind it.
+
+That commit lands before the recorder runs. The recorder never writes a key
+anywhere, and `scripts/key-scan.ts` already knows both providers' key shapes.
+
+#### worktree-server — the API, the proxy, the store and the sign-in
+
+1. `apps/api/src/server.ts` — the routes, in place of the single `/health`.
+   `/health` keeps answering exactly as it does today, because `npm run smoke`
+   measures it.
+2. `apps/api/src/routes/` — new, one file per group: the session, the models
+   list, the sign-in and sign-out, the conversations including the delete, and
+   the streamed turn. Every route in the contract above, and none that is not.
+3. `apps/api/src/sign-in.ts` — new. The stand-in: an account name, the one-time
+   password printed once to the console at start-up and never to a log file, and
+   a session cookie named by `config/environments.json` holding a session id and
+   nothing more. Bound to loopback.
+4. `apps/api/src/store.ts` — new. One database file per environment under that
+   environment's own data folder. It deletes anything past the retention figure
+   in three places: at start-up, on a timer while the API runs, and the moment
+   an expired thing is read. Each sweep writes one line — the time and how many
+   conversations went — and nothing else.
+5. `apps/api/src/main.ts` — start-up: the password, the first sweep, the timer,
+   and the keys file's permission warning.
+6. `apps/api/src/environment.ts` — extended, not replaced, to hand out the
+   retention figure it already loads. The store reads it from there rather than
+   opening `config/environments.json` a second time.
+7. `packages/proxy/src/keys.ts` — new. **The only reader of the keys file.**
+   Read at start-up, its modified time checked whenever the availability list is
+   asked for, and re-read only when that time has changed. Nothing it returns
+   carries a path, a length, or any part of a key.
+8. `packages/proxy/src/terms.ts` — new, carrying the example note. The one
+   place that records which providers' terms the Compliance lead has read and
+   confirmed in writing. **Today it names none**, so every provider model is
+   switched off and only Mock answers. It is what turns a present key into
+   `terms-not-read` rather than into a model that can be picked, and it is the
+   server stream's because it is a fact about compliance rather than about an
+   adapter.
+9. `packages/proxy/src/router.ts` — new. Picks the adapter for a model and hands
+   it the key accessor. It is the one place that combines a key with
+   `terms.ts` to decide whether a model is selectable, and with what reason. The
+   only part that talks to a provider.
+10. `packages/proxy/src/log.ts` — new. The logger that swaps a key, a token, a
+   cookie value or an Authorization value for `[redacted]` and keeps the word in
+   front of it. A canary test proves it.
+11. `packages/proxy/src/index.ts` — the barrel.
+12. `apps/api/src/**/*.test.ts` and `packages/proxy/src/**/*.test.ts` — new. The
+    routes are driven through supertest; the purge, the key reader and the
+    logger are tested directly.
+13. `docs/3-build/server/` — this stream's notes.
+14. `intent/spindle/plan.md` — the `worktree-server` section above, and nothing
+    else in the file, if the work departs from it.
+
+Shared files this stream may name: **the make-it-yours guide**, for the row
+`packages/proxy/src/terms.ts` needs in section 4, Keys and providers, the row
+the sign-in stand-in needs in section 9, App stand-ins, and the rows its own
+records under `docs/3-build/` create.
+
+### Two lists of paths, which are not the same list
+
+They are confused easily and they do different jobs.
+
+**Paths that need a change ticket.** The kit builds `protect-paths.ts` around
+this list, from the brief:
+
+```
+the recorded replies       .worktreeinclude          .mcp.json
+.github/workflows/**       .github/actions/**        .github/ci/**
+.claude/settings*.json     .claude/hooks/**          scripts/deploy*.ts
+```
+
+**No stream session holds a ticket, and none is given one.** So no stream edits
+any of these, including the recordings — which is why the recorder runs outside
+the app and a recording is re-recorded rather than corrected. A stream that finds
+it needs one of these paths stops and says so rather than asking for a ticket.
+
+**Paths that make Linda's gate comment compulsory on a plan section.** The kit's
+plan-sync check reads this list, which is the one above plus two:
+
+```
+packages/proxy/**          apps/api/src/sign-in.ts
+```
+
+`worktree-server` names both. That is the whole reason Linda co-signs this
+section: they are the only reader of the keys file, the only part that talks to a
+provider, the logger that redacts, and the sign-in.
+
+#### This commit
+
+1. `intent/spindle/plan.md`, holding this section.
+2. `docs/3-build/plan-cold-read.md`, the cold read that ends on an empty list of
+   questions.
+3. `docs/make-it-yours.md` — the row that cold read's record creates.
+4. `README.md` — the status line moves to Stage 3, as Wave 1 and Wave 2 each
+   moved it in their own commit. It is rewritten to stay true for the whole
+   stage rather than only for today, since no stream may name the README and
+   nothing else in Wave 3 would come back to it: the window, the adapters and
+   the server are built a stream at a time, and sending a message to a real
+   model becomes possible in Stage 5.
+
+### The wording this wave is waiting on
+
+The picker cannot be drawn without words that do not exist yet, and no stream is
+allowed to invent them.
+
+Today no provider's terms have been read, so all three provider models sit in
+exactly the state the brand policy does not cover. `intent/spindle/spec.md` is
+explicit about it: concerns 4 and 9 leave three strings owed — **terms not
+read**, **terms not read with no key either**, and **unavailable**, for a key
+that is present but refused — and the spec says that until the brand policy
+carries those words, no wording for them is invented anywhere in the build.
+`design/chat-mock.html` carries `terms not read` as a proposal and
+`docs/2-design/evidence.md` records it as exactly that: the worked example the
+owed change gets decided against.
+
+So **the brand policy gains those three strings in a commit of its own, gated by
+Rahul, before `worktree-web` opens.** A policy changes in its own commit owned by
+its own owner; that is how Wave 2 left it, and this section does not edit a
+policy. It is a small commit — one table in
+`plugins/house-policies/skills/brand/SKILL.md` — and it is the only thing in
+Wave 3 the brief does not already ask for. It is named here because the wave
+stops without it, and Marcus and Rahul both see it at this gate.
+
+**Settled at the gate on 2026-09-16 by Marcus: Rahul settles the three strings
+first**, in that commit of his own, before `worktree-web` opens. It can be done
+while the kit is being built, so it costs the wave no waiting.
+
+The fallback was not taken, and is recorded here so nobody later reads the
+decision as the only option there was: `worktree-web` would have drawn only the
+states the brand policy already fixes, the picker would have shown the three
+provider models as having no key, and the terms-not-read state would have waited
+— a screen saying something true and incomplete, rather than a picker quietly
+inventing a phrase.
+
+**Every other word on the screen is the stream's to write.** The rule is
+narrower than "no stream invents words", which would stop the wave dead: a
+stream may not invent words **where a policy or an accepted artefact already
+fixes them**, and must use those exactly. The brand policy fixes the picker's
+four labels and lines, the no-key reason and the button reading
+`Sign in (stand-in)`; `design/chat-mock.html`, accepted in Wave 2, fixes the face
+toggle's two words and the history notice — which **is** the line beside the
+conversation list that spec requirement 3 asks for, so nobody writes a second
+one. Everywhere else — the sign-in view's plain-words explanation, the state
+`api.ts` shows when nothing is listening, the API's `error` strings, and what
+Mock actually replies — the stream writes plain words against the ux policy's
+rules, and the owner reads them at the gate. Screen text a person reads is
+exactly what a gate is for.
+
+### The wave's four measures, and where they go
+
+Waves 1 and 2 each carried their measures in their own commit, so the silence
+here would be read as a change of practice. It is not. Wave 3 owes four:
+
+1. **Merges that passed on the first attempt** — pull requests merged to main
+   whose own first pipeline run was green, against all of them. `33e67a2` is not
+   in it: `docs/0-setup/facts.md` records that red run as being on a **push** to
+   main, not on a pull request, and the measure counts pull requests.
+2. **The distance from plan approval to merge** — from the date on an accepted
+   plan section to the merge of the first commit it covers.
+3. **The distance from a policy being approved to its skill merging** — the four
+   policies landed in Wave 0; the first engineering skill lands with the kit.
+4. **Spec commits dated after the first plan** — commits on main touching
+   `intent/spindle/spec.md` and dated **after `a04e46b`, the commit that added
+   it**. The obvious wording, "after the first plan section", counts `a04e46b`
+   itself, because the first plan section is dated 2026-09-14 and the spec
+   arrived the day after — so it would read 1 for a spec nobody has ever
+   reopened. Wave 2's intent measure took the same care, and for the same
+   reason. Worded this way it reads 0 today, which is a figure.
+
+**They go in the kit's commit, not in any stream's.** `scripts/measures.ts` and
+`scripts/measures.test.ts` are in no stream's paths and on no shared list, and
+putting them there would make the kit's own section the only lawful home — which
+it is, since the kit is the wave's one commit that touches shared tooling. The
+kit's section names them. No stream writes a measure, and a stream that thinks it
+needs to has misread its fence.
+
+**Three of the four have figures the day the kit merges**, which is worth saying
+because it would be easy to write all four as "no figure yet" and never notice
+they were silent. Measure 1 has five merged pull requests to count already, all
+of which passed first time. Measure 2 has four accepted plan sections. Measure 4
+reads 0, which is a figure and not a silence. Only measure 3 waits, because the
+first engineering skill arrives with the kit itself.
+
+**The count of permission prompts per stream session is not one of these.** It
+is per-session, it is counted by a person watching, and it goes into
+`docs/3-build/` as evidence. Nothing in `npm run measures` can read it.
+
+### The shared files
+
+Four, as the brief fixes them: the lockfile, the root manifest, `CLAUDE.md` and
+the make-it-yours guide. The table adds three more the brief does not name — the
+frozen workspace manifests, `docs/claude-mistakes.md` and `.prettierignore` —
+each with its reason in its own row, and each surfaced at the gate rather than
+slipped in. A stream may change one only from inside its own pull
+request, and only once its own section above names it. Stream pull requests land
+one after another, each catching up with main before it lands, so a shared file
+never needs a pull request or a commit of its own.
+
+The table carries one row the brief's list does not: the four **workspace
+manifests**, which are not shared files so much as frozen ones. They are here
+because they are the only files inside a stream's own fence that it must not
+touch, and a table nobody reads twice is the right place to say so.
+
+**Read this table together with each stream's own line.** Three of these rows
+are open to any stream — `CLAUDE.md` and `docs/claude-mistakes.md` for the
+repeated-mistake rule, and the guide for that stream's own rows — so every
+stream may name them without its own line repeating it. A stream's own line
+names only what is particular to that stream, which today is the root manifest,
+`.prettierignore` and the `CLAUDE.md` `record` line, all three the adapters'.
+
+| File | Who may name it | Why |
+|---|---|---|
+| `package-lock.json` | **nobody** | The kit installs everything the three streams need, so the lockfile has stopped moving before any stream opens. No stream runs `npm install`; each runs `npm ci`, which installs what the lockfile says and never writes it. The checks redden a stream pull request that moves it |
+| `apps/web/package.json`, `apps/api/package.json`, `packages/proxy/package.json`, `packages/adapters/package.json` | **nobody** | Frozen for exactly the same reason, and this is the trap worth naming: each of these sits *inside* a stream's own paths, so nothing about the fence stops a stream editing one — but the lockfile records every workspace's dependency block, so a line added here moves the lockfile, reddens the pull request, and makes that stream's own next `npm ci` fail. The kit puts every dependency in before the streams open, including `packages/proxy` declaring `@spindle/adapters`. A stream that finds it needs a package stops and says so |
+| `package.json`, the root manifest | `worktree-adapters` | To point `record` at the real script instead of the stub that exits 1 |
+| `CLAUDE.md` | `worktree-adapters`, and any stream | Adapters, because building `record` makes the Commands line that says it is not built yet false in the same pull request. Any stream, for the one case the kit's rule creates: a mistake seen a second time moves its correction into `CLAUDE.md` in the same pull request |
+| `docs/make-it-yours.md` | any stream, for its own rows only | A new file carrying the example note needs its row in the same commit, and the guide's own rule is that each stage fills in the rows it creates. Each stream writes rows for its own files and its own records under `docs/3-build/`, and touches nobody else's |
+| `docs/claude-mistakes.md` | any stream, for its own rows only | The fifth file this section asks for, below. Same terms: a row for a mistake that stream met, and nobody else's |
+| `.prettierignore` | `worktree-adapters` | `npm run lint` runs `prettier --check .`, and Prettier reformats a trimmed recording — it puts the body chunks on one line. No session may re-format a recording to suit it, because no session may touch a recording at all, and `.gitattributes` already carries `**/recordings/** -text`, so git does no end-of-line conversion on them either. So `packages/adapters/recordings/` goes in `.prettierignore` in the same pull request that creates it, exactly as Wave 2 did for the design export |
+
+**A fifth file this section asks for, which the brief's list does not hold.**
+`docs/claude-mistakes.md` begins with the kit: every first mistake earns a dated
+row there, and the second time the same one shows up its correction moves into
+`CLAUDE.md` inside the same pull request, which links back to the row. Three
+streams will each meet their own first mistakes. Unless all three may write a
+row, the link that rule asks for has nothing to point at, and the `CLAUDE.md`
+line in the table above cannot be used. So this section proposes
+`docs/claude-mistakes.md` as a fifth shared file, on exactly the same terms as
+the other four.
+
+The alternative, which this section did not take: the streams report their
+mistakes and one later session writes every row. That keeps the brief's four
+intact, but it puts each row in a different commit from the correction it
+explains, and it has the row written by a session that never watched the mistake
+happen.
+
+**Settled at the gate on 2026-09-16 by Marcus: all seven rows stand.** The
+brief's four, plus the frozen workspace manifests, `docs/claude-mistakes.md` and
+`.prettierignore`. Two of the three came out of the cold read finding a pull
+request that could not otherwise go green, and the third is what makes the
+repeated-mistake rule usable at all. The departure from the brief's list of four
+is recorded here rather than tidied away.
+
+### Order of work
+
+1. **This section**, accepted by Marcus with Linda's comment beside it, written
+   by the owner **in the plan session**, before the other three files this commit
+   carries are written. No pull request exists yet to hold those words, so Claude
+   copies them onto the header above. When the pull request does exist, the owner
+   writes both again as pull request comments, because the gate ritual's record
+   is a comment on the pull request. Waves 0, 1 and 2 each closed the same clash
+   the same way.
+2. **The cold read.** A read-only helper with no memory of the interview is
+   handed this plan and the repository and nothing else, and told to list every
+   question it would still have to ask. The section is revised until that list
+   comes back empty, and every attempt is kept in
+   `docs/3-build/plan-cold-read.md`. Commit 4 carries four files: this section,
+   that record, the guide row the record creates, and the README's status line.
+   The cold read runs **before** acceptance, since what Marcus accepts is a
+   section a newcomer has already shown can be built from; the guide row and the
+   README line are written after it.
+3. **The kit**, in its own session under a change ticket, beginning with its own
+   dated section and Linda's acceptance of it. Its deliberate attempts run
+   inside that session. Linda approves the kit, and then main is merged and
+   pulled in the main folder before a single stream opens.
+4. **The keys**, the owner's own turn, outside the app. Nothing before this point
+   needs one, and the recorder is the only thing in the whole wave that uses one.
+5. **Two small policy commits, each gated by its own owner.** The brand policy's
+   three owed strings, gated by Rahul — `worktree-web` cannot open until that is
+   on main. And the security policy's one sentence about the recorder, gated by
+   the Security lead — the recorder cannot run until that is on main. Neither
+   blocks the kit, so both can be done while the kit is being built. Both were
+   settled at the gate on this section; see "The wording this wave is waiting on"
+   and "The recorder needs a key, and every written rule says no".
+6. **Three stream sessions at once**, each of which runs `EnterWorktree` and then
+   `npm ci` before anything else. `worktree-adapters` fixes the interface the
+   server reads, so it is first to a pull request. `worktree-web` does not wait
+   for it at all. `worktree-server` does not wait to start and does wait to open,
+   for the reason set out under the adapter contract. Every stream closes with
+   the code-simplifier's single pass before its pull request opens.
+7. **Commit 6, the adapters,** which has an owner's turn in the middle of it. The
+   adapters session writes the interface, the parser, the mapper, the two
+   providers, the mock, the recorder and the tests, and then **stops**: its own
+   tests fail outright with no recordings, and no session may write one. The
+   owner runs `npm run record` in that worktree, from a PowerShell window outside
+   the app, and reads the diff of recordings. Then the session resumes, the tests
+   go green, the code-simplifier makes its pass, and only then does the pull
+   request open — so `pipeline`, which is required on every pull request, sees a
+   green branch on its first run rather than a red one waiting on a person.
+   Marcus accepts. Merged.
+8. **Commit 7, the web.** It catches up with main first, and Marcus accepts.
+   Merged.
+9. **The server stays a draft** until Wave 5, titled so that anyone can see it is
+   waiting for the review in Stage 5. Each time anything merges to main that
+   branch catches up, and says that it has.
+
+Nothing in this section presses a Run button, so it costs no Claude run on
+GitHub. What it costs is sessions: this one, the kit's, and three at once.
+
+### Risks
+
+1. **`CLAUDE.md` is 40 lines and the checks cap it at 60.** The kit adds
+   Architecture and a block on verification to it. Either the file is compressed
+   to fit or the cap moves, and moving a cap is a decision rather than something
+   that happens quietly while a file grows. The kit's own section settles which,
+   in as many words.
+2. **Three sessions and one lockfile.** The kit installs everything first —
+   Express, better-sqlite3 and supertest for the server, and for the web stream's
+   tests a DOM environment and a React testing library, which the brief's list
+   does not name but its rule does. No stream runs an install, no stream names
+   the lockfile, and the paths rule reddens a stream pull request that moves it.
+   What this guards against is two streams each resolving the tree slightly
+   differently and the third inheriting whichever landed last.
+3. **The worktree route has not been seen since commit 1 reached main.** Wave 0
+   measured `EnterWorktree` before anything was pushed, so three rows in
+   `docs/0-setup/facts.md` still wait on a worktree session: whether the owner's
+   local settings file travels into one, whether the app's own worktree option
+   gives the same folder and branch names, and whether a worktree session runs
+   the main checkout's hooks. All three are answered the first time a stream
+   opens, and whatever they answer goes into `docs/3-build/` — including an
+   answer that contradicts what this section expects.
+4. **The hooks run from wherever the session began.** `CLAUDE_PROJECT_DIR` stays
+   at the main checkout when a session enters a worktree, which is what puts
+   every stream's decision-log line in one file and lets `protect-paths.ts` find
+   the bindings folder. If that turns out to be false, the log splits three ways
+   and the ticket check reads the wrong place. The kit proves it before any
+   stream opens, by attempting a blocked edit from inside a worktree.
+5. **A guard that fails closed can stop the build it guards.** `protect-secrets.ts`
+   shuts key files and anything key-shaped, and a source file these streams need
+   must never match. The shapes are exact, `keys.env.example` is never blocked,
+   and the kit's attempts prove both directions: the refusal, and an ordinary
+   edit going through untouched.
+6. **The formatter is the one hook allowed to fail open,** so a Prettier that has
+   gone missing stops formatting silently rather than stopping the edit. That is
+   the point of letting it fail open. `npm run lint` is the backstop and it
+   tolerates no warnings.
+7. **A recording could carry more than the three allowed fields.** The test fails
+   on any further field and on anything shaped like a credential, the key scan
+   runs over it at commit, and the owner reads the diff of recordings before it
+   goes anywhere.
+8. **Four sessions write one decision log.** The kit and the three streams all
+   append to one file in the main checkout's `.claude/logs/`, from separate Node
+   processes, on Windows. Interleaved or lost lines are the risk, and a
+   half-written log is worse than none because it looks complete. Each line is
+   written with a single append of one whole line, which is the one thing that
+   keeps concurrent appends apart, and the kit's own section owns proving it —
+   the deliberate attempts run while more than one session is open.
+9. **A pinned model id can be wrong, and it is the recorder that finds out** —
+   running against a real key and real credit. The ids are read from the
+   providers' own pages on the day, the OpenRouter credit is capped at ten
+   dollars with automatic top-up off, and the recorded prompt is nothing but a
+   greeting.
+10. **`better-sqlite3` is a native module.** It compiles or fetches a prebuilt
+   binary at install time, on the owner's Windows machine and on the Linux
+   runner both. If it will not install on either, the fallback is Node 24's own
+   `node:sqlite`, which needs no package at all. The kit is where the install
+   happens, so the kit finds this out and writes down which of the two the store
+   ended up on.
+11. **The route contract is held together by this page and nothing else.** The
+    two streams that build its halves share no file, so no compiler and no test
+    catches a mismatch: the web stream's tests drive a fake fetch shaped from
+    the table above, and the server's drive supertest against the same table. It
+    is Wave 5, when the API merges and the two halves meet for the first time,
+    that finds anything this page got wrong. That is a known cost of building
+    them apart, and the mitigation is that the contract is written down before
+    either stream opens rather than discovered afterwards.
+12. **The server stream can prove less than the other two.** It never runs
+    against a real key in this wave and its pull request stays a draft, so its
+    only evidence is its own tests and the replies the adapters stream recorded.
+    That is why it is the stream Linda gates rather than Marcus alone.
+
+### Alternatives not taken
+
+1. **One stream on one branch.** Simpler to merge and impossible to get wrong.
+   Rejected because the thing this wave is measuring is three sessions working at
+   once, and one branch measures nothing.
+2. **A stub API behind the web stream,** so the window is fully alive in Wave 3.
+   Rejected: it would be torn out in Wave 5 by a commit nobody has planned, and
+   every screenshot round would be proving a stub rather than the product.
+3. **Fixtures only for the web stream,** with the model list read from a
+   checked-in file. Rejected for the same reason and one more: requirement 2 says
+   availability is settled by the API and not by the page, and a fixture leaves
+   that rule unbuilt and untested.
+4. **A shared vitest environment setting** in the root `vitest.config.ts`, rather
+   than a line in each test file that needs a DOM. Rejected because it would make
+   `vitest.config.ts` a file two streams want, and the shared list is meant to
+   stay short.
+5. **`node:sqlite` from the start,** skipping the native module. Rejected because
+   the brief names `better-sqlite3` and the fallback costs one import if it is
+   ever needed. It is kept here as the fallback rather than the plan.
+6. **Letting the adapters session read the catalogue pages itself.** Rejected: it
+   would hand a build session the outbound reach the deny list exists to take
+   away, by a route the checks cannot police.
+7. **A server-rendered sign-in page,** which would keep the streams even further
+   apart. Rejected because it splits the window across two streams and two
+   technologies, and the ux policy would then govern a page React never sees.
+8. **A commit of its own for the shared files.** Rejected: the brief forbids it,
+   and catching up with main before each landing does the same job with no extra
+   pull request.
+
+### Proof
+
+- `npm test`, `npm run lint`, `npm run build`, `npm run checks` and
+  `npm run wording-check` all pass in the main folder with three worktrees in
+  place, and give what they gave before: 10 checks passed, 0 failed, 0 skipped,
+  plus whatever rules the kit adds.
+- `npm run smoke` still prints its one line with no keys file present.
+- Each stream's pull request raises the test count above main's, and adds no
+  skipped, exclusive or pending test.
+- The adapters tests replay the recorded OpenRouter and NVIDIA streams through
+  the real parser. Taking a recording away makes that test fail; this is proved
+  once and written down, rather than asserted.
+- Nothing beyond the status, the content type and the body chunks survives in a
+  recording, and the test that says so fails on anything shaped like a
+  credential.
+- Each stream's pull request touches only its own paths, its own plan section,
+  and the shared files that section names. `npm run checks` proves it rather than
+  a reviewer's eye, and neither merged stream moves the lockfile.
+- The web stream files one paired image and one written list of differences per
+  round under `docs/3-build/screenshot-rounds/`, the list getting shorter each
+  round, and the owner says in a pull request comment that the final one matches
+  the captured mock — measured over the five things the mock shows, with what
+  the app has and the mock does not listed once and not counted.
+- `npm run build` emits no `screenshot.html` and no chunk for it, so the
+  development-only entry cannot reach anyone.
+- The count of permission prompts is recorded for each of the three stream
+  sessions, and under accept-edits a stream reaches an open pull request with
+  none at all for the commands the allow list covers.
+- The cold read for this section ends on an empty list of questions, and every
+  earlier attempt is in `docs/3-build/plan-cold-read.md` beside it rather than
+  only the one that passed.
+- Both Marcus's and Linda's decisions are written in the plan session before the
+  commit's other three files, copied onto the header above, and written again as
+  comments on this commit's pull request once it exists.
+
+### What acceptance means
+
+Marcus accepts this section when Marcus agrees that:
+
+- the three streams as drawn share no file, and the boundary between the window
+  and the server is the right place to cut;
+- the route contract and the adapter contract above are the contracts, fixed
+  here because the streams that build their halves share no file and nothing
+  later reconciles them;
+- a stream's fence is its paths, and the numbered lists are what it builds inside
+  them rather than the fence itself;
+- the screenshot rounds are taken of a development-only second entry that the
+  production build never emits, and they are measured over what the mock shows;
+- the delete-everything-under-this-name route is built in this wave and the
+  window's control for it waits for Wave 5;
+- each stream runs `npm ci` in its worktree and never `npm install`, and the
+  kit's allow list carries that one extra exact command;
+- the server stream builds the router last and opens its draft only once the
+  adapters have merged, rather than declaring the interface twice;
+- the recorder gets its key by reading the keys file, once the security policy
+  says it may;
+- the brand policy's three owed strings are settled in their own commit, gated by
+  Rahul, before the web stream opens, and the security policy's one sentence in
+  its own commit gated by the Security lead before the recorder runs;
+- the web stream builds the sign-in view from the spec's words, with no mock
+  behind it and no screenshot round covering it;
+- the page calls the real routes from the first day and degrades in plain words,
+  rather than being given a stub or a fixture;
+- the model ids are the owner's to read and paste, because no session is given
+  outbound reach;
+- the shared list is the seven rows the table above holds, three of them more
+  than the brief names;
+- the order is right, and in particular that the adapters stream is the one that
+  reaches a pull request first while the other two carry on;
+- and that the proof above is measurable rather than asserted.
+
+Linda co-signs because `worktree-server` names `packages/proxy/**` and
+`apps/api/src/sign-in.ts`, which this section classes as high risk: they are the
+only reader of the keys file, the only part that talks to a provider, the logger
+that redacts, and the sign-in.
+
+**Linda co-signs the adapters pull request too**, when it comes, because it
+changes `CLAUDE.md`, which `.github/CODEOWNERS` gives to the tech lead. Waves 1
+and 2 both co-signed for that reason. Nothing else the adapters stream touches
+is owned: `.github/CODEOWNERS` names no row for the root manifest or for
+`.prettierignore`, and this section does not ask for one — a row is a change to
+three files the checks compare against each other, and it is not this wave's to
+make. The web pull request needs Marcus alone unless it ends up naming
+`CLAUDE.md` for a repeated mistake, in which case it needs Linda as well.
+
+**Rahul is not pulled in by a plan section.** `.github/CODEOWNERS` gives
+`/intent/` to the product owner, and every stream's list ends with
+`intent/spindle/plan.md`, so the co-sign rule read literally would put Rahul on
+all three stream pull requests and on this one. It does not, and the precedent
+is in this file: the Wave 0 fix section was accepted by Linda alone, and it
+edited `intent/spindle/plan.md`. What `/intent/` protects is the intent and the
+spec — the things a product owner decides. A plan section is accepted by that
+section's own gate role, and a stream extending its **own** subsection with a
+departure is doing what this section already told it to do. Rahul is pulled in
+when the intent or the spec changes, which nothing in Wave 3 does.
+
+Acceptance is `Accepted - Marcus, engineer`, with
+`Accepted - Linda, tech lead and release manager` beside it. Both are written by
+the owner in the plan session first, before the other three files this commit
+carries, since no pull request exists yet to hold them; Claude copies them onto
+the header above. Both are then written again as comments on this commit's pull
+request, which is where the gate ritual keeps its record.
+
+### Built differently from this section
+
+One thing has already gone otherwise than the order above says. It is recorded
+here rather than tidied out of it, and more will be added as the wave runs.
+
+1. **Two of this commit's own files were written before the gate, not after.**
+   "Order of work" step 1 puts the guide row and the README's status line after
+   acceptance. Both were written before the owner wrote either gate comment. The
+   cold read had already run and its record was written, which is the part of
+   step 2 that genuinely has to come first; what slipped was the two small
+   records that follow. Nothing in either prejudges the decision — neither
+   changed when the gate settled the seven shared rows, the recorder's key and
+   the brand policy's three strings — and the owner was told before deciding
+   rather than after. The section is left as it stands, because the rule it sets
+   is the right rule; this is a note that the rule was not kept on its first
+   outing.

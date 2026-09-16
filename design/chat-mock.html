@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spindle</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f4f1;
+    --panel: #fffdfb;
+    --sunk: #f1ede8;
+    --ink: #241f1b;
+    --ink-2: #6d645b;
+    --line: #e4ddd4;
+    --accent: #b4541f;
+    --accent-ink: #ffffff;
+    --accent-ring: 0 0 0 3px rgba(180, 84, 31, 0.25);
+    --radius: 10px;
+    --rest: 0 1px 2px rgba(31, 23, 15, 0.06), 0 2px 8px rgba(31, 23, 15, 0.05);
+    --lift: 0 2px 4px rgba(31, 23, 15, 0.08), 0 6px 16px rgba(31, 23, 15, 0.08);
+    --gap: 16px;
+    --gap-lg: 24px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-face="light"]) {
+      color-scheme: dark;
+      --bg: #141210;
+      --panel: #1c1a17;
+      --sunk: #171513;
+      --ink: #f1ece6;
+      --ink-2: #a89e93;
+      --line: #2d2825;
+      --accent: #e08145;
+      --accent-ink: #1a1512;
+      --accent-ring: 0 0 0 3px rgba(224, 129, 69, 0.3);
+      --rest: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+      --lift: 0 2px 4px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-face="dark"] {
+    color-scheme: dark;
+    --bg: #141210;
+    --panel: #1c1a17;
+    --sunk: #171513;
+    --ink: #f1ece6;
+    --ink-2: #a89e93;
+    --line: #2d2825;
+    --accent: #e08145;
+    --accent-ink: #1a1512;
+    --accent-ring: 0 0 0 3px rgba(224, 129, 69, 0.3);
+    --rest: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --lift: 0 2px 4px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 "Segoe UI", system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  a { color: var(--accent); }
+  :focus-visible { outline: none; box-shadow: var(--accent-ring); border-radius: var(--radius); }
+
+  .bar {
+    display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .mark { font-size: 17px; font-weight: 600; letter-spacing: 0.2px; }
+  .mark span { display: block; font-size: 12px; font-weight: 400; color: var(--ink-2); }
+  .bar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--sunk); color: var(--ink-2); font-size: 13px;
+  }
+  .btn {
+    padding: 8px 14px;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--panel); color: var(--ink);
+    font: inherit; font-size: 14px; cursor: pointer;
+    box-shadow: var(--rest);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: var(--lift); }
+  .btn:active { transform: translateY(0); box-shadow: none; }
+  .btn-accent { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+
+  main {
+    width: min(820px, 100%);
+    margin: 0 auto;
+    padding: var(--gap-lg) 20px;
+    display: flex; flex-direction: column; gap: var(--gap);
+    flex: 1;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--rest);
+  }
+
+  .picker { padding: var(--gap); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .picker label { font-size: 13px; color: var(--ink-2); }
+  select {
+    padding: 8px 12px; min-width: 260px;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--sunk); color: var(--ink); font: inherit;
+  }
+  .picker-note { flex-basis: 100%; font-size: 13px; color: var(--ink-2); margin: 0; }
+
+  .notice { padding: 10px var(--gap); font-size: 13px; color: var(--ink-2); background: var(--sunk); border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; }
+
+  .thread { padding: var(--gap); display: flex; flex-direction: column; gap: var(--gap); }
+  .day { display: flex; align-items: center; gap: 12px; color: var(--ink-2); font-size: 12px; }
+  .day::before, .day::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+  .turn { display: flex; flex-direction: column; gap: 4px; }
+  .who { font-size: 12px; color: var(--ink-2); }
+  .said { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunk); }
+  .turn.me .said { background: var(--panel); }
+
+  form.composer { padding: var(--gap); display: flex; flex-direction: column; gap: 10px; }
+  textarea {
+    width: 100%; min-height: 84px; resize: vertical;
+    padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--sunk); color: var(--ink); font: inherit;
+  }
+  .composer-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .hint { font-size: 12px; color: var(--ink-2); margin: 0; }
+  .composer-row .btn-accent { margin-left: auto; }
+
+  footer { padding: 16px 20px 28px; text-align: center; font-size: 12px; color: var(--ink-2); }
+
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+  @media (max-width: 420px) { select { min-width: 100%; } .composer-row .btn-accent { margin-left: 0; width: 100%; } }
+</style>
+</head>
+<body>
+  <header class="bar">
+    <div class="mark">Spindle<span>One chat window for any model</span></div>
+    <div class="bar-right">
+      <span class="chip">Signed in as dev (stand-in)</span>
+      <button class="btn" id="face" type="button" aria-pressed="false">Dark face</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel picker">
+      <label for="model">Model</label>
+      <select id="model" aria-describedby="model-note">
+        <option value="mock" selected>Mock</option>
+        <option value="claude" disabled>Claude — add a key: see keys.env.example; terms not read</option>
+        <option value="gpt" disabled>GPT — add a key: see keys.env.example; terms not read</option>
+        <option value="nvidia" disabled>NVIDIA — add a key: see keys.env.example; terms not read</option>
+      </select>
+      <p class="picker-note" id="model-note">A stand-in model that answers without a key.</p>
+    </section>
+
+    <section class="panel">
+      <p class="notice">Everyone who signs in as <strong>dev</strong> shares this conversation history. The sign-in is a stand-in and checks nobody's identity.</p>
+      <div class="thread" id="thread" role="log" aria-live="polite" aria-label="Conversation">
+        <p class="day">Yesterday</p>
+        <div class="turn me">
+          <p class="who">You</p>
+          <p class="said">We keep losing track of which tool answered what. Can you summarise where we left off?</p>
+        </div>
+        <div class="turn">
+          <p class="who">Mock</p>
+          <p class="said">You were comparing two answers about the keys file, and decided to keep every key in one place outside the project.</p>
+        </div>
+        <p class="day">Today</p>
+        <div class="turn me">
+          <p class="who">You</p>
+          <p class="said">Good. Let's pick that up.</p>
+        </div>
+        <div class="turn">
+          <p class="who">Mock</p>
+          <p class="said">Ready when you are. Choose another model from the list for a second opinion, and this conversation goes with you.</p>
+        </div>
+      </div>
+    </section>
+
+    <form class="panel composer" id="composer">
+      <label class="hint" for="message">Message</label>
+      <textarea id="message" placeholder="Ask anything"></textarea>
+      <div class="composer-row">
+        <p class="hint">Enter sends. Shift and Enter start a new line.</p>
+        <button class="btn btn-accent" type="submit">Send</button>
+      </div>
+    </form>
+  </main>
+
+  <footer>Spindle is an independent teaching project, neither affiliated with nor endorsed by Anthropic.</footer>
+
+<script>
+  var NOTES = {
+    mock: "A stand-in model that answers without a key.",
+    claude: "Anthropic's model, reached through OpenRouter.",
+    gpt: "OpenAI's model, reached through OpenRouter.",
+    nvidia: "A model served by NVIDIA."
+  };
+  var picker = document.getElementById('model');
+  var note = document.getElementById('model-note');
+  picker.addEventListener('change', function () { note.textContent = NOTES[picker.value]; });
+
+  var face = document.getElementById('face');
+  face.addEventListener('click', function () {
+    var dark = document.documentElement.getAttribute('data-face') === 'dark';
+    document.documentElement.setAttribute('data-face', dark ? 'light' : 'dark');
+    face.textContent = dark ? 'Dark face' : 'Light face';
+    face.setAttribute('aria-pressed', String(!dark));
+  });
+
+  var thread = document.getElementById('thread');
+  var box = document.getElementById('message');
+  function say(who, words) {
+    var turn = document.createElement('div');
+    turn.className = 'turn' + (who === 'You' ? ' me' : '');
+    var name = document.createElement('p');
+    name.className = 'who';
+    name.textContent = who;
+    var said = document.createElement('p');
+    said.className = 'said';
+    said.textContent = words;
+    turn.appendChild(name);
+    turn.appendChild(said);
+    thread.appendChild(turn);
+    turn.scrollIntoView({ block: 'nearest' });
+  }
+  document.getElementById('composer').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var words = box.value.trim();
+    if (!words) return;
+    say('You', words);
+    box.value = '';
+    say(picker.options[picker.selectedIndex].text.split(' — ')[0], 'This is the stand-in model. It answers without a key, so anyone can try Spindle with nothing set up.');
+  });
+  box.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      document.getElementById('composer').requestSubmit();
+    }
+  });
+</script>
+</body>
+</html>

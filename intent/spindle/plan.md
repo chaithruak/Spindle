@@ -757,3 +757,36 @@ Linda co-signs because the section changes `CLAUDE.md`, `.claude/settings.json`,
 `Accepted - Linda, tech lead and release manager`, both written by the owner in
 this session before any file in the list is written, and copied by Claude onto
 the lines above. No pull request exists yet to hold them.
+
+### Built differently from this section
+
+Four things went otherwise than the section above expected. They are recorded
+here rather than tidied out of it.
+
+1. **Claude Design was not used, so three pieces of evidence do not exist.**
+   The section, and the wave's brief behind it, expected the mock to be built at
+   claude.ai/design, exported as standalone HTML, and handed off with a prompt
+   carrying a bundle link. None of that happened. The owner had the mock written
+   in one go by another Claude session, from the intent, the UX and brand
+   policies and this wave's settled concerns. So there is no hand-off prompt, no
+   design conversation and no record of rounds, and `docs/2-design/` holds none
+   of the three. The done-check line about no bundle link surviving in the
+   committed hand-off prompt is met because there is no hand-off prompt at all,
+   which is not the same thing as a link having been removed, and is not written
+   up as though it were. `docs/make-it-yours.md` lost the three rows it had
+   gained for those files.
+2. **The mock needed no font from the web,** so the risk about the allowed
+   origins showing a fallback never arose. The export holds no address of any
+   kind, and the picture shows the mock as designed.
+3. **The mock ran ahead of the brand policy, and was brought back.** Its first
+   version wrote its own words for a model with no key. The brand policy fixes
+   those words, and this spec had just recorded two further cases as owed to that
+   policy rather than invented anywhere. The owner changed the mock so the
+   no-key wording is the brand policy's exactly, leaving `terms not read` as the
+   one proposal in the picture, which is the worked example the owed change gets
+   decided against.
+4. **The spec job declares the `claude` environment,** which this section did not
+   mention. The key it needs is held there rather than at repository level, so
+   without the line the job could never see it, and the environment's required
+   reviewer means a Run press asks the owner first. The runner guard still
+   arrives in Wave 4.

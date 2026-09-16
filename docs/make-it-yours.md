@@ -35,13 +35,10 @@ Either way, Spindle's records come with the files. They show how Spindle itself 
 | `docs/1-plan/evidence.md` | 1 | How each piece of Stage 1 evidence was made, and what is missing from it | Your own record; keep nothing you did not really do |
 | `docs/1-plan/connector-access.png` | 1 | Which repositories the installed Claude app reaches, with the account name covered | Your own connector's page, scrubbed the same way |
 | `intent/spindle/spec.md` | 2 | The spec Spindle was designed from, with nine concerns each settled by its policy's owner | Write your own product's spec with the spec template; keep this one only as an example |
-| `design/chat-mock.html` | 2 | The chat window's mock, exported from Claude Design as a standalone page | Your own mock, exported the same way |
+| `design/chat-mock.html` | 2 | The chat window's mock, one standalone page with nothing loaded from the web | Your own mock, however you make it |
 | `design/chat-mock.png` | 2 | A picture of that mock, taken with the Playwright tools, which Wave 3 compares screenshots against | A picture of your own mock |
 | `docs/2-design/spec-prompt.md` | 2 | The prompt the owner typed to produce the spec, kept word for word | Your own prompt, as you really typed it |
 | `docs/2-design/skills-present.md` | 2 | Proof that all four policies were loaded in the session that wrote the spec | Your own proof, taken the same way |
-| `docs/2-design/handoff-prompt.md` | 2 | Claude Design's hand-off prompt, with its bundle link taken out | Your own hand-off prompt, with the link removed the same way |
-| `docs/2-design/design-conversation.md` | 2 | The Claude Design conversation that produced the mock | Your own conversation, copied out the same way |
-| `docs/2-design/mock-rounds.md` | 2 | What changed between the mock's rounds | Your own rounds |
 | `docs/2-design/session-export.md` | 2 | The spec session's transcript, turned into Markdown and scrubbed | Your own session, scrubbed the same way |
 | `docs/2-design/evidence.md` | 2 | How each piece of Stage 2 evidence was made, and what is missing from it | Your own record; keep nothing you did not really do |
 

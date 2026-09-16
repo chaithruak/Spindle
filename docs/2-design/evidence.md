@@ -68,11 +68,37 @@ at here.
 
 ## The picture of the mock
 
-`design/chat-mock.png` is taken with the Playwright tools that `.mcp.json` names. It could
+`design/chat-mock.png` was taken with the Playwright tools that `.mcp.json` names. It could
 not be taken in the session that wrote everything else here: MCP servers load only when a
-session starts, and this session began before `.mcp.json` named Playwright. It is taken in
-the next session on the same branch, and this file says so rather than leaving the gap
-unexplained.
+session starts, and that session began before `.mcp.json` named Playwright. It was taken in
+the next session on the same branch, and committed there as `7e55acf`. The picture is
+1000 by 1331 and 52,242 bytes.
+
+**No scan checked it. A person did.** Both guards skip binary files, and this was read in the
+code rather than assumed: `looksBinary` in `scripts/lib/repo.ts` calls a file binary when a
+zero byte appears in its first 8,000 bytes, `scripts/key-scan.ts` skips such a file, and
+`scripts/wording-check.ts` leaves it out of what it measures. A PNG is binary by that test on
+its first bytes. So the picture passed the pre-commit hook without being looked at by
+anything, and the only check it had was Claude opening it and reading aloud everything
+legible in it for the owner to confirm — which is what the wave's scrub rule asks for, and
+why that rule exists rather than leaning on the guards.
+
+**What the picture does not show.** The picker is a native closed `select`, so the three
+switched-off models are inside it and not visible: Claude, GPT and NVIDIA do not appear, and
+neither does the wording that concern 4 was about. The wave's sharpest decision is therefore
+not in the image, only in `chat-mock.html` beside it and in the spec. Wave 3 compares
+screenshots against this picture, so it is written down here rather than left to be
+discovered there. A closed native select cannot be opened from a screenshot alone; a second
+picture with the list open would need the mock changed.
+
+**What is legible in it,** as read aloud to the owner before it was committed: the name and
+the line under it; `Signed in as dev (stand-in)`; `Dark face`; `Model` with `Mock` chosen and
+its brand-policy line beneath; the sentence saying everyone signing in as `dev` shares that
+history and that the sign-in checks nobody's identity; a conversation under `Yesterday` and
+`Today` with four turns, each marked `You` or `Mock`; `Message`, the placeholder
+`Ask anything`, `Enter sends. Shift and Enter start a new line.` and `Send`; and the
+independent-project line at the foot. `dev` is the stand-in account name. No account name, no
+path, no key and no link appears anywhere in it.
 
 **How it is taken, and why not straight from the file.** Playwright is held to the loopback
 ports in `config/environments.json` and blocks `file://` navigation by default, so the mock

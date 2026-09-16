@@ -99,6 +99,37 @@ each edit left out, since the files themselves are in the commit.
 The page stops while the session was still running, so the commit, the push and the gate
 that came after it are not in it.
 
+**Two more things it leaves out**, both wording from outside this repository: the raw
+`/context` output the owner pasted, and the wave's lifecycle card, which Claude quoted in its
+first message. A note stands where the card was. The output of any command that read the page
+back is left out too, since the page is in the commit.
+
+### What the scans found
+
+`node scripts/key-scan.ts --staged` applies the owner's own private pattern file as well as
+the shared credential rules, and names a file and a line without ever printing the words.
+It was run over this page before anything was committed, and it **refused the first run**:
+
+| Run | Result |
+|---|---|
+| 1 | 2 findings, both `personal pattern`, both the same thing: the name of a file inside the hand-off folder. `<hand-off file>` was added to the script's replacements |
+| 2 | clean |
+
+Reading the page afterwards turned up one thing the scan could not see, and it is recorded
+because it shows what a scan of this kind does and does not cover. The Windows user name
+survived once, inside a regular expression in one of Claude's own scan commands: the
+replacement asked for a word boundary before the name, and the character in front of it was
+part of `\b`, so the boundary did not hold. The rule was changed to match the name without a
+boundary, which is safe because the account name is replaced before it. The page was built
+again and the name is gone.
+
+The key scan did not catch it because its personal rules only build home-path shapes from
+that first line, deliberately: the bare name is never matched on its own, since it would fire
+on the account name that CODEOWNERS, the licence and the README all carry. So the scan worked
+as designed, and reading the result was still worth doing.
+
+`node scripts/wording-check.ts --staged` came back clean on every run.
+
 ## What the spec produced, as a count
 
 Nine concerns were flagged. One of the nine is a real contradiction between two policies —

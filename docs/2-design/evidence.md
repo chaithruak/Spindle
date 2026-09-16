@@ -53,6 +53,19 @@ signing in with the same name shares that history; a conversation carried over f
 yesterday; `Enter sends. Shift and Enter start a new line.` spelled out under the box; a
 light and a dark scheme; and the independent-project line at the foot.
 
+## One thing measured by accident
+
+`.claude/settings.json` was written with `"allowedMcpServers": ["playwright"]`, a list of
+names, and committed that way. Some minutes later the file had changed on disk on its own,
+to `"allowedMcpServers": [{ "serverName": "playwright" }]`. Nobody edited it; Claude Code
+normalised the setting into the object form, which is the shape
+`.claude/settings.local.json` already uses for denied servers. The app's version is what the
+repository now carries, because it is the form the app actually keeps.
+
+What this does **not** settle: whether the list-of-names form works as well as the object
+form, or is quietly ignored until it is rewritten. That was not measured, and is not guessed
+at here.
+
 ## The picture of the mock
 
 `design/chat-mock.png` is taken with the Playwright tools that `.mcp.json` names. It could

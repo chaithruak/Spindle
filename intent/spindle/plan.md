@@ -595,3 +595,165 @@ and that each figure is printed only when its data exists. Acceptance is the
 comment `Accepted - Rahul, product owner`, written by the owner in the Wave 1
 session before any file in the list is written, and copied by Claude onto the
 Accepted line above. No pull request exists yet to hold it.
+
+---
+
+## 2026-09-15 — Wave 2: the spec skill, the spec job, Playwright and two measures
+
+**Gate role for this section:** Rahul, product owner.
+**Accepted:** 2026-09-15 — `Accepted - Rahul, product owner`, written by the
+owner in the Wave 2 session before any file in the list was written.
+**Co-signed:** 2026-09-15 — `Accepted - Linda, tech lead and release manager`,
+written by the owner in the same message, because the section changes
+`CLAUDE.md`, `.claude/settings.json`, `.mcp.json` and a workflow, which
+CODEOWNERS gives to the tech lead.
+
+### Why this section exists
+
+Most of Wave 2 has an intent behind it. `intent/spindle/spec.md` reads the
+accepted intent and the four policies, and the mock is a picture of the window
+that intent asks for; neither needs a plan section. Four things in the wave do,
+because nothing in the intent asks for them:
+
+1. The owner's spec prompt kept as a skill, so the next spec is written the same
+   way rather than from memory.
+2. A job on GitHub that can run that skill from main.
+3. Playwright named in `.mcp.json`, which is how the picture of the mock gets
+   taken and how Wave 3 compares screenshots.
+4. The wave's two measures, added to `npm run measures` the way Wave 1 added its
+   two.
+
+### What the brief asked for, and what this section does instead
+
+The brief gives the spec job `contents` and `pull requests` write. It also says
+the route is settled by what `docs/0-setup/facts.md` recorded about squash-merge
+authorship, and that record is plain: the job pushes a branch and stops, and the
+pull request is opened afterwards from the owner's own session, so the owner
+stays the author of the merge. `docs/how-we-work.md` already says so in its
+Stage 2 section. A job that never opens a pull request has no use for write
+access to pull requests, so the workflow gets `contents: write` alone. The owner
+chose this in plan mode. It is written down here because it narrows what the
+brief asked for, and nobody reading the workflow later should have to guess why.
+
+### Files this section will touch
+
+1. `plugins/house-policies/skills/write-spec/SKILL.md` — new, carrying the
+   example note. It asks for the Policy conflicts line, for every open question
+   in the intent to be answered or carried forward on purpose, and for a header
+   naming the four policy commit ids and its own. It runs only when someone
+   types it.
+2. `.github/workflows/write-spec.yml` — new. `workflow_dispatch` alone, taking
+   the intent's path as its input. It registers the marketplace, installs the
+   plugin, and stops with an error when the spec skill or any of the four
+   policies is missing from the session. It commits against the owner's no-reply
+   address, built from the repository owner the workflow context hands it,
+   pushes its branch and stops there. The automatic trigger sits commented out,
+   with a line above it saying it is an example that is not running.
+3. `scripts/checks.ts` — `WORKFLOW_POLICY` gains the new workflow, or the
+   workflow rule fails on a file it has no policy for. The trigger type widens
+   so a `workflow_dispatch` entry can name its inputs by name.
+4. `.mcp.json` — Playwright at one exact version, isolated, headless, its
+   allowed origins naming only the development ports in
+   `config/environments.json` on 127.0.0.1, and its output folder the one
+   `.gitignore` already knows.
+5. `.claude/settings.json` — `allowedMcpServers` and `enabledMcpjsonServers`
+   each name that server, which is what the guide's row for `.mcp.json` asks
+   for.
+6. `CLAUDE.md` — the browser line, which today says `.mcp.json` names no
+   servers.
+7. `.prettierignore` — the design export, which is kept exactly as it came out
+   of Claude Design.
+8. `scripts/measures.ts` and `scripts/measures.test.ts` — the wave's two
+   measures.
+9. `config/roles.json`, `.github/CODEOWNERS` and the table of signers in
+   `docs/how-we-work.md` — the new skill owned by Rahul and Linda, as the intent
+   template is.
+10. `docs/make-it-yours.md` — a row for every new example file and every Stage 2
+    record, in this same commit.
+11. `README.md` — the status line moves to Stage 2.
+12. `intent/spindle/plan.md` — this section, and its Accepted and Co-signed
+    lines.
+
+Riding in the same commit, but not built by this section: `intent/spindle/spec.md`,
+the mock's two halves under `design/`, and the evidence under `docs/2-design/`.
+
+### The two measures
+
+1. **Intent commit to spec commit.** Both dates come from `main`, first parents
+   only: the commit that added `intent/spindle/intent.md`, which is `add7ce5`,
+   and the commit that adds `intent/spindle/spec.md`. The span is printed
+   through the `formatDuration` that is already there. Until the spec is on
+   main, the report says so and prints no figure.
+2. **Edits to the intent after the first spec.** Commits on `main` that touch
+   `intent/spindle/intent.md` and are dated after that spec commit. It reads 0
+   the day the spec merges. `c304731` edited the intent before any spec existed
+   and is not counted; the measure is about an intent being reopened once design
+   has read it.
+
+Both are pure functions over lists of dates, tested directly. Git is reached
+only from the reporting layer, through `git()` in `scripts/lib/repo.ts`, and no
+test reaches git or the network.
+
+### The order
+
+This section first, and its acceptance before anything else is written. Then the
+proof that the policies loaded, then the spec, then the concerns settled one at
+a time. The mock is the owner's turn and can happen while the skill, the
+workflow, the measures and the guide rows are built, because none of them depend
+on it. The picture of the mock comes last, since Playwright only appears once a
+session has started with it named in `.mcp.json`.
+
+### Risks
+
+- **A new MCP server is a new program a session starts.** It is pinned to an
+  exact version rather than a moving tag, kept isolated so no browser profile is
+  written to disk, and its allowed origins name the two local ports and nothing
+  else. The owner reads `.mcp.json` line by line at the gate.
+- **Playwright blocks `file://` by default**, so the exported mock cannot be
+  opened as a file without widening that access. It is served over 127.0.0.1
+  instead, for the length of the capture, and nothing new is committed to do it.
+- **The export may ask for a web font.** The allowed origins do not include one,
+  so the picture would show the fallback. If that happens the evidence says so;
+  the allowlist is not widened to make the picture prettier.
+- **The spec job cannot succeed yet.** Its key arrives with the `claude`
+  environment in Wave 4. The wave's done-check asks only that the Run button is
+  there, so the button is not pressed. One press would cost 1 Claude run.
+- **The marketplace-and-install route in the job is the brief's, not the one
+  `facts.md` prefers.** That record says `--plugin-dir plugins/house-policies` is
+  the dependable route where nothing has been installed. The job runs on a fresh
+  runner every time, where the install works, and it fails closed either way; if
+  the install turns out not to hold on a runner, the fallback is one flag.
+- **A skill that runs only when typed** depends on what this build of Claude
+  Code supports. Whichever way it turns out to work is what gets written down,
+  and the name the menu really shows is recorded rather than assumed.
+- **The example note and the guide move together.** Every new file carrying the
+  note needs its row in the same commit, or `npm run checks` goes red.
+
+### Proof
+
+- `npm run lint`, `npm test`, `npm run build` and `npm run checks` pass, with
+  the checks counting 2 workflows and the new example files.
+- `npm run wording-check` prints no matches, with the evidence folder measured
+  against the hand-off as well as the playbook.
+- Before the merge, `npm run measures` says the spec is not on main yet. After
+  the merge and a pull it prints the span, and 0 edits to the intent since.
+- On main, `gh workflow view write-spec.yml` shows the Run button.
+- A fresh session lists the spec skill, and the name it shows goes into
+  `docs/2-design/evidence.md`.
+- `design/chat-mock.png` opens and shows the mock, and the owner has confirmed
+  everything legible in it.
+
+### What acceptance means
+
+Rahul accepts this section when Rahul agrees that the spec prompt is worth
+keeping as a skill and a job; that the job pushes a branch and never opens a
+pull request, and so needs write access to contents alone; that Playwright is
+pinned, isolated and held to the local ports, with the mock served over
+127.0.0.1 rather than opened as a file; that the two measures are the ones the
+wave asks for; and that the new skill is owned by Rahul and Linda together.
+Linda co-signs because the section changes `CLAUDE.md`, `.claude/settings.json`,
+`.mcp.json` and a workflow. Acceptance is the comment
+`Accepted - Rahul, product owner`, and Linda's is
+`Accepted - Linda, tech lead and release manager`, both written by the owner in
+this session before any file in the list is written, and copied by Claude onto
+the lines above. No pull request exists yet to hold them.

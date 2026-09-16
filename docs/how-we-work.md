@@ -27,6 +27,7 @@ One section per stage, each short enough to read in a minute. The roster is an e
 | UX policy | `plugins/house-policies/skills/ux/` | Rahul |
 | Brand policy | `plugins/house-policies/skills/brand/` | Rahul |
 | Intent template | `.claude/skills/write-intent/` | Rahul and Linda |
+| Spec template | `plugins/house-policies/skills/write-spec/` | Rahul and Linda |
 
 **Adopting the plays.** Stage by stage, in the order of this page: set-up first, then intent, then design, and so on. The order of plays inside a stage waits for the rows of `docs/playbook-map.md`, which are still open.
 
@@ -55,7 +56,9 @@ One section per stage, each short enough to read in a minute. The roster is an e
 Someone without engineering skill gets through design in one of two ways:
 
 - **In claude.ai or Cowork**, with the four house policies uploaded as skills and this repository synced read-only. The connector reads but cannot write, so their changes come back through a pull request someone else opens.
-- **By merging the intent and pressing Run on the spec job.** The job pushes a branch; the pull request is then opened from the owner's Spindle session. The spec job arrives in a later wave.
+- **By merging the intent and pressing Run on the spec job.** The job pushes a branch; the pull request is then opened from the owner's Spindle session. The job is `.github/workflows/write-spec.yml`, and it stops before doing anything until the `claude` environment holds its key, which arrives in Wave 4.
+
+**Writing a spec.** The four house policies must be loaded in the session, and the session proves it before the spec is written. The spec flags every concern the policies raise, each settled by that policy's owner with a gate comment and a date, and closes that section by naming the policies that contradict each other or saying none do. Where settling a concern asks a policy to say something new, the spec records the debt and the policy changes in its own commit. The template is `plugins/house-policies/skills/write-spec/`.
 
 ---
 

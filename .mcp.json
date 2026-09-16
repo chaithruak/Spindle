@@ -1,1 +1,18 @@
-{ "mcpServers": {} }
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.81",
+        "--isolated",
+        "--headless",
+        "--block-service-workers",
+        "--allowed-origins",
+        "http://127.0.0.1:3000;http://127.0.0.1:4000;http://127.0.0.1:3100;http://127.0.0.1:4100;http://127.0.0.1:3200;http://127.0.0.1:4200",
+        "--output-dir",
+        ".playwright-mcp"
+      ]
+    }
+  }
+}

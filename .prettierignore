@@ -6,3 +6,6 @@ data/
 dist/
 .claude/worktrees/
 .claude/settings.local.json
+
+# The design export is kept exactly as Claude Design produced it.
+design/chat-mock.html

@@ -32,14 +32,17 @@ export const ADAPT_FILES = [
   '.claude/settings.json',
   '.claude/hooks/session-start.ts',
   '.github/workflows/pipeline.yml',
+  '.github/workflows/write-spec.yml',
   '.github/pull_request_template.md',
   'scripts/key-scan.ts',
   'docs/repository-settings.md',
 ];
 
-// What each workflow may be triggered by and allowed to do.
+// What each workflow may be triggered by and allowed to do. A trigger is
+// matched whole, except that naming `inputs` matches the input names alone, so
+// a policy does not have to repeat every description a dispatch input carries.
 type WorkflowPolicy = {
-  triggers: Record<string, { branches?: string[] } | null>;
+  triggers: Record<string, { branches?: string[]; inputs?: string[] } | null>;
   permissions: Record<string, string>;
   jobs: Record<string, Record<string, string> | null>;
   callsClaude: boolean;
@@ -54,6 +57,12 @@ export const WORKFLOW_POLICY: Record<string, WorkflowPolicy> = {
       'no-keys-smoke': { contents: 'read', statuses: 'write' },
     },
     callsClaude: false,
+  },
+  'write-spec.yml': {
+    triggers: { workflow_dispatch: { inputs: ['intent'] } },
+    permissions: { contents: 'write' },
+    jobs: { 'write-spec': null },
+    callsClaude: true,
   },
 };
 
@@ -262,7 +271,19 @@ const rules: Rule[] = [
           problems.push(`${file} triggers on ${Object.keys(triggers).join(', ')}`);
         }
         for (const [event, expected] of Object.entries(policy.triggers)) {
-          if (stableJson(triggers[event] ?? null) !== stableJson(expected)) {
+          const actual = triggers[event] ?? null;
+          if (expected?.inputs) {
+            const named = Object.keys(
+              (actual as { inputs?: Record<string, unknown> } | null)?.inputs ?? {},
+            );
+            if (!sameSet(named, expected.inputs)) {
+              problems.push(
+                `${file}: the ${event} trigger takes ${named.join(', ') || 'no inputs'}, not ${expected.inputs.join(', ')}`,
+              );
+            }
+            continue;
+          }
+          if (stableJson(actual) !== stableJson(expected)) {
             problems.push(`${file}: the ${event} trigger is not ${stableJson(expected)}`);
           }
         }

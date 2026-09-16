@@ -2,8 +2,8 @@
   "model": "claude-opus-5",
   "availableModels": ["claude-opus-5"],
   "enforceAvailableModels": true,
-  "allowedMcpServers": [],
-  "enabledMcpjsonServers": [],
+  "allowedMcpServers": ["playwright"],
+  "enabledMcpjsonServers": ["playwright"],
   "autoMemoryEnabled": false,
   "crossSessionInbound": "refuse",
   "attribution": {

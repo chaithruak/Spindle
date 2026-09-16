@@ -34,6 +34,13 @@ Either way, Spindle's records come with the files. They show how Spindle itself 
 | `docs/1-plan/conversation.md` | 1 | The conversation that produced the intent, start and end times included | Your own conversation, copied out the same way |
 | `docs/1-plan/evidence.md` | 1 | How each piece of Stage 1 evidence was made, and what is missing from it | Your own record; keep nothing you did not really do |
 | `docs/1-plan/connector-access.png` | 1 | Which repositories the installed Claude app reaches, with the account name covered | Your own connector's page, scrubbed the same way |
+| `intent/spindle/spec.md` | 2 | The spec Spindle was designed from, with nine concerns each settled by its policy's owner | Write your own product's spec with the spec template; keep this one only as an example |
+| `design/chat-mock.html` | 2 | The chat window's mock, one standalone page with nothing loaded from the web | Your own mock, however you make it |
+| `design/chat-mock.png` | 2 | A picture of that mock, taken with the Playwright tools, which Wave 3 compares screenshots against | A picture of your own mock |
+| `docs/2-design/spec-prompt.md` | 2 | The prompt the owner typed to produce the spec, kept word for word | Your own prompt, as you really typed it |
+| `docs/2-design/skills-present.md` | 2 | Proof that all four policies were loaded in the session that wrote the spec | Your own proof, taken the same way |
+| `docs/2-design/session-export.md` | 2 | The spec session's transcript, turned into Markdown and scrubbed | Your own session, scrubbed the same way |
+| `docs/2-design/evidence.md` | 2 | How each piece of Stage 2 evidence was made, and what is missing from it | Your own record; keep nothing you did not really do |
 
 ## 2. Repository settings to re-create
 
@@ -43,6 +50,7 @@ Do this before any workflow runs: a copy made from the template receives files, 
 |---|---|---|---|
 | `docs/repository-settings.md` | 0 | Every GitHub setting, with the clicks and the `gh` command for each | Apply each one to your copy, in order |
 | `.github/workflows/pipeline.yml` | 0 | Build, lint, test, key scan, checks and audit, plus the no-keys smoke | Change `runs-on` if you use your own runners, and `--audit-level` if your bar differs |
+| `.github/workflows/write-spec.yml` | 2 | Turns an accepted intent into a spec and pushes a branch; it never opens the pull request | Your marketplace and plugin names, and the environment your Claude key sits on |
 | `SECURITY.md` | 0 | How to report a vulnerability | Keep GitHub's private vulnerability reporting, or name your own route; either way, publish no personal email |
 
 ## 3. Your account and names
@@ -82,6 +90,7 @@ Do this before any workflow runs: a copy made from the template receives files, 
 | `plugins/house-policies/skills/ux/SKILL.md` | 0 | The rules the chat window follows | Your UX rules, owner and written source |
 | `plugins/house-policies/skills/compliance/SKILL.md` | 0 | What may be kept about a person, for how long, and the providers' terms | Your policy; keep the `**Retention:**` line equal to `retentionDays` |
 | `plugins/house-policies/skills/brand/SKILL.md` | 0 | The name, the voice and the picker's wording | Your brand rules and your models' wording |
+| `plugins/house-policies/skills/write-spec/SKILL.md` | 2 | The spec template: the header, the flagged concerns, the Policy conflicts line and the open-question mapping | Your own spec headings; keep the Policy conflicts line and the rule against inventing one |
 
 ## 7. The steering files
 
@@ -91,7 +100,7 @@ Do this before any workflow runs: a copy made from the template receives files, 
 | `.claude/settings.json` | 0 | Session keys, the plugin marketplace and the session hook entries | The `model` and `availableModels` lines to match `config/claude.json`, and the marketplace name |
 | `.claude/hooks/session-start.ts` | 0 | Loads the GitHub token, binds a session note and warns on a model mismatch | The home-folder layout (`~/.spindle/`), the 10-minute note window and the 24-hour binding age, near the top of the file |
 | `.claude/skills/write-intent/SKILL.md` | 0 | The intent template | Your questions and your intent headings |
-| `.mcp.json` | 0 | The MCP servers a session may use; none yet | Only the servers your repository needs, each also named in `allowedMcpServers` and `enabledMcpjsonServers` |
+| `.mcp.json` | 0 | The MCP servers a session may use: Playwright, pinned to one version, isolated, and allowed to reach the loopback ports alone | Only the servers your repository needs, each also named in `allowedMcpServers` and `enabledMcpjsonServers`; keep `--allowed-origins` in step with the ports in `config/environments.json` |
 
 ## 8. Environments and deploy
 

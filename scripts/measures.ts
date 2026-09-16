@@ -3,15 +3,22 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { git, readText, ROOT } from './lib/repo.ts';
 
-// Prints the measures report. Two measures have a source so far: the time from
-// an intent's conversation starting to the intent merging on main, and the
-// share of decided intents that were accepted rather than closed. Each figure
-// is printed only when its data exists; otherwise the report says what is
-// missing. docs/playbook-map.md says how a team would measure every other play.
+// Prints the measures report. Four measures have a source so far: the time from
+// an intent's conversation starting to the intent merging on main, the share of
+// decided intents that were accepted rather than closed, the time from an
+// intent landing on main to its spec landing there, and how often an intent was
+// edited after its first spec existed. Each figure is printed only when its
+// data exists; otherwise the report says what is missing.
+// docs/playbook-map.md says how a team would measure every other play.
 
 // Which conversation each intent came from.
 export const INTENT_CONVERSATIONS = [
   { intent: 'intent/spindle/intent.md', conversation: 'docs/1-plan/conversation.md' },
+];
+
+// Which spec belongs to which intent.
+export const INTENT_SPECS = [
+  { intent: 'intent/spindle/intent.md', spec: 'intent/spindle/spec.md' },
 ];
 
 // A pull request carries an intent when its branch starts with this.
@@ -62,6 +69,18 @@ export function repositoryFromRemote(remote: string): { owner: string; repo: str
   return match ? { owner: match[1]!, repo: match[2]! } : undefined;
 }
 
+// How many of these commit dates fall after the spec's own. A commit at the
+// same moment as the spec is the commit that carried the spec, so only what
+// comes strictly after counts as the intent being reopened.
+export function editsAfter(commitDates: string[], specDate: string): number {
+  const spec = new Date(specDate).getTime();
+  if (Number.isNaN(spec)) return 0;
+  return commitDates.filter((date) => {
+    const at = new Date(date).getTime();
+    return !Number.isNaN(at) && at > spec;
+  }).length;
+}
+
 export type ClosedPull = { head: { ref: string }; merged_at: string | null };
 
 // Decided intent pull requests: merged counts as accepted, closed without a merge as closed.
@@ -105,6 +124,29 @@ export async function fetchClosedPulls(
   return { error: `there are more than ${PAGE_SIZE * MAX_PAGES} closed pull requests to read` };
 }
 
+// When a file was added on main, following first parents only. An empty list
+// means it is not there; undefined means git could not read the history at all.
+async function addedOnMain(file: string): Promise<string[] | undefined> {
+  const log = await git([
+    'log',
+    MAIN,
+    '--first-parent',
+    '--diff-filter=A',
+    '--format=%aI',
+    '--',
+    file,
+  ]);
+  return log === undefined ? undefined : log.trim().split('\n').filter(Boolean);
+}
+
+// Every commit on main that touched a file, newest first.
+async function touchedOnMain(file: string): Promise<string[] | undefined> {
+  const log = await git(['log', MAIN, '--first-parent', '--format=%aI', '--', file]);
+  return log === undefined ? undefined : log.trim().split('\n').filter(Boolean);
+}
+
+const NO_HISTORY = `git could not read the history of ${MAIN} here`;
+
 async function conversationToMerge(intent: string, conversation: string): Promise<string> {
   const text = existsSync(path.join(ROOT, conversation)) ? readText(conversation) : undefined;
   if (text === undefined) return `${intent}: no figure, because ${conversation} is missing.`;
@@ -112,25 +154,46 @@ async function conversationToMerge(intent: string, conversation: string): Promis
   if (!start) {
     return `${intent}: no figure, because the first line of ${conversation} does not read "Conversation started: <time with its offset>".`;
   }
-  const added = await git([
-    'log',
-    MAIN,
-    '--first-parent',
-    '--diff-filter=A',
-    '--format=%aI',
-    '--',
-    intent,
-  ]);
-  if (added === undefined) {
-    return `${intent}: no figure, because git could not read the history of ${MAIN} here.`;
-  }
-  const merged = added.trim().split('\n').filter(Boolean).at(-1);
+  const added = await addedOnMain(intent);
+  if (added === undefined) return `${intent}: no figure, because ${NO_HISTORY}.`;
+  const merged = added.at(-1);
   if (merged === undefined) return `${intent}: no figure yet, because it is not on ${MAIN}.`;
   const span = formatDuration(new Date(merged).getTime() - start.at.getTime());
   if (span === undefined) {
     return `${intent}: no figure, because its commit on ${MAIN} is dated before the conversation started.`;
   }
   return `${intent}: ${span}, from ${start.written} (${conversation}) to ${merged} (its commit on ${MAIN})`;
+}
+
+// The intent lands on main, then design turns it into a spec. Both dates are
+// author dates on main, which for a squash merge is the time it was merged.
+async function intentToSpec(intent: string, spec: string): Promise<string> {
+  const intentAdded = await addedOnMain(intent);
+  const specAdded = await addedOnMain(spec);
+  if (intentAdded === undefined || specAdded === undefined) {
+    return `${spec}: no figure, because ${NO_HISTORY}.`;
+  }
+  const intentAt = intentAdded.at(-1);
+  if (intentAt === undefined) return `${spec}: no figure yet, because ${intent} is not on ${MAIN}.`;
+  const specAt = specAdded.at(-1);
+  if (specAt === undefined) return `${spec}: no figure yet, because it is not on ${MAIN}.`;
+  const span = formatDuration(new Date(specAt).getTime() - new Date(intentAt).getTime());
+  if (span === undefined) {
+    return `${spec}: no figure, because its commit on ${MAIN} is dated before ${intent}.`;
+  }
+  return `${spec}: ${span}, from ${intentAt} (${intent}) to ${specAt} (its commit on ${MAIN})`;
+}
+
+// An intent edited after design has read it is an intent that was reopened.
+async function editsSinceSpec(intent: string, spec: string): Promise<string> {
+  const specAdded = await addedOnMain(spec);
+  if (specAdded === undefined) return `${intent}: no count, because ${NO_HISTORY}.`;
+  const specAt = specAdded.at(-1);
+  if (specAt === undefined) return `${intent}: no count yet, because ${spec} is not on ${MAIN}.`;
+  const touched = await touchedOnMain(intent);
+  if (touched === undefined) return `${intent}: no count, because ${NO_HISTORY}.`;
+  const edits = editsAfter(touched, specAt);
+  return `${intent}: ${edits} edit${edits === 1 ? '' : 's'} since ${spec} landed on ${MAIN} at ${specAt}`;
 }
 
 async function acceptedShare(): Promise<string> {
@@ -156,6 +219,16 @@ async function main(): Promise<void> {
   console.log('');
   console.log('Intents accepted rather than closed');
   console.log(`  ${await acceptedShare()}`);
+  console.log('');
+  console.log('Merged intent to merged spec');
+  for (const { intent, spec } of INTENT_SPECS) {
+    console.log(`  ${await intentToSpec(intent, spec)}`);
+  }
+  console.log('');
+  console.log('Edits to an intent after its first spec');
+  for (const { intent, spec } of INTENT_SPECS) {
+    console.log(`  ${await editsSinceSpec(intent, spec)}`);
+  }
   console.log('');
   console.log(
     'No other measure has data yet. See docs/playbook-map.md for how each play would be measured.',

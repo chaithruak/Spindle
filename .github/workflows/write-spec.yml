@@ -1,0 +1,156 @@
+name: write-spec
+
+# Turns an accepted intent into a spec, using the house-policies plugin's
+# write-spec skill. It pushes a branch and stops: the pull request is opened
+# afterwards from the owner's Spindle session with `gh pr create`, so the owner
+# stays the author of the squash merge. docs/0-setup/facts.md records why.
+#
+# Nothing here runs on its own. It waits for the Run button until Wave 6.
+
+on:
+  workflow_dispatch:
+    inputs:
+      intent:
+        description: Path to the accepted intent, for example intent/spindle/intent.md
+        required: true
+        default: intent/spindle/intent.md
+
+  # Example, not running. Wave 6 gives four jobs a trigger of their own; until
+  # then this stays commented out and the Run button is the only way in.
+  #
+  # push:
+  #   branches: [main]
+  #   paths: ['intent/*/intent.md']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: write-spec-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  FORCE_COLOR: '0'
+  NO_COLOR: '1'
+
+jobs:
+  write-spec:
+    runs-on: ubuntu-latest
+
+    # The Claude key lives on this environment, never at repository level, and
+    # the environment asks the owner to approve each run. Both the key and the
+    # shared runner guard arrive in Wave 4; until then every run of this job
+    # stops at the first step below, on purpose.
+    environment: claude
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Stop unless the Claude key exists
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY}" ]; then
+            echo 'No ANTHROPIC_API_KEY on the claude environment, so nothing ran.'
+            echo 'The key arrives in Wave 4. This job is complete and waiting for it.'
+            exit 1
+          fi
+
+      - name: Check the intent exists
+        env:
+          INTENT: ${{ inputs.intent }}
+        run: |
+          case "${INTENT}" in
+            intent/*/intent.md) ;;
+            *) echo "The input must be a path like intent/<name>/intent.md, not ${INTENT}."; exit 1 ;;
+          esac
+          test -f "${INTENT}" || { echo "${INTENT} is not in this repository."; exit 1; }
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install from the lockfile
+        run: npm ci
+
+      - name: Install the pinned Claude Code
+        run: |
+          version=$(node -p "require('./config/claude.json').claudeCodeVersion")
+          npm install -g "@anthropic-ai/claude-code@${version}"
+          claude --version
+
+      - name: Register the marketplace and install the plugin
+        run: |
+          claude plugin marketplace add ./
+          claude plugin install house-policies@spindle
+
+      # Fail closed. A spec written without the policies loaded is worth nothing
+      # as evidence, so the job stops here rather than producing one.
+      - name: Stop unless the spec skill and all four policies are in the session
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude -p 'List the name of every skill available to you, one per line, and nothing else.' \
+            --setting-sources project \
+            --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
+            > skills.txt
+          missing=0
+          for skill in write-spec security compliance ux brand; do
+            if ! grep -qi "house-policies:${skill}" skills.txt; then
+              echo "missing from the session: house-policies:${skill}"
+              missing=1
+            fi
+          done
+          echo "skills the session listed: $(grep -c . skills.txt)"
+          if [ "${missing}" -ne 0 ]; then
+            echo 'The session is missing the spec skill or a policy, so no spec was written.'
+            exit 1
+          fi
+
+      # The skill is typed, not chosen: it carries disable-model-invocation, so
+      # a slash command is the way in. These flags are unproven until the key
+      # arrives in Wave 4; whatever they turn out to need is recorded then.
+      - name: Write the spec
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          INTENT: ${{ inputs.intent }}
+        run: |
+          claude -p "/house-policies:write-spec ${INTENT}" \
+            --setting-sources project \
+            --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
+            --permission-mode acceptEdits
+          spec="$(dirname "${INTENT}")/spec.md"
+          test -f "${spec}" || { echo "No spec was written at ${spec}."; exit 1; }
+          echo "SPEC=${spec}" >> "$GITHUB_ENV"
+
+      # The author is the repository owner's no-reply address, assembled from
+      # the context so no account name is written into this file.
+      - name: Push the branch, and stop there
+        env:
+          INTENT: ${{ inputs.intent }}
+        run: |
+          name=$(basename "$(dirname "${INTENT}")")
+          branch="spec/${name}-${{ github.run_number }}"
+          git config user.name '${{ github.repository_owner }}'
+          git config user.email '${{ github.repository_owner }}@users.noreply.github.com'
+          git checkout -b "${branch}"
+          git add "${SPEC}"
+          git commit -m "Spec: ${name}, written by the spec job from ${INTENT}"
+          git push origin "${branch}"
+          {
+            echo '### Spec written'
+            echo ''
+            echo "Branch \`${branch}\` is pushed. This job does not open the pull request."
+            echo 'Open it from your Spindle session so that you stay the author of the merge:'
+            echo ''
+            echo '```'
+            echo "gh pr create --base main --head ${branch}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

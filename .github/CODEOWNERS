@@ -16,6 +16,7 @@
 
 # role: product-owner, tech-lead
 /.claude/skills/write-intent/ @chaithruak
+/plugins/house-policies/skills/write-spec/ @chaithruak
 
 # role: security-lead
 /plugins/house-policies/skills/security/ @chaithruak

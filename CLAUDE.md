@@ -37,4 +37,4 @@ Each line ends on what healthy output looks like.
 
 ## Browser work
 
-Browser work in this repository goes through the Playwright tools that `.mcp.json` names; it names none yet.
+Browser work goes through the Playwright server `.mcp.json` names, pinned to one version and isolated. It may reach the loopback ports in `config/environments.json` and nothing else, so serve a local file over one of those ports rather than opening it as a `file://` URL.

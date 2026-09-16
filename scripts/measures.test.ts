@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  editsAfter,
   fetchClosedPulls,
   formatDuration,
   readStart,
@@ -56,6 +57,38 @@ describe('a duration', () => {
   it('is refused when negative', () => {
     expect(formatDuration(-60_000)).toBeUndefined();
     expect(formatDuration(Number.NaN)).toBeUndefined();
+  });
+});
+
+describe('edits to an intent after its spec', () => {
+  const spec = '2026-09-15T21:00:00-05:00';
+
+  it('counts only commits dated after the spec landed', () => {
+    expect(
+      editsAfter(
+        [
+          '2026-09-16T09:30:00-05:00',
+          '2026-09-15T21:00:00-05:00',
+          '2026-09-15T18:44:39-05:00',
+          '2026-09-14T11:00:00-05:00',
+        ],
+        spec,
+      ),
+    ).toBe(1);
+  });
+
+  it('does not count the commit that carried the spec itself', () => {
+    expect(editsAfter([spec], spec)).toBe(0);
+    expect(editsAfter(['2026-09-16T02:00:00Z'], spec)).toBe(0);
+  });
+
+  it('reads 0 when the intent was never touched again', () => {
+    expect(editsAfter([], spec)).toBe(0);
+  });
+
+  it('ignores a date git could not give and a spec date that is not a date', () => {
+    expect(editsAfter(['not a date', '2026-09-16T09:30:00-05:00'], spec)).toBe(1);
+    expect(editsAfter(['2026-09-16T09:30:00-05:00'], 'not a date')).toBe(0);
   });
 });
 

@@ -9,7 +9,8 @@
         "intent/",
         ".claude/skills/write-intent/",
         "plugins/house-policies/skills/ux/",
-        "plugins/house-policies/skills/brand/"
+        "plugins/house-policies/skills/brand/",
+        "plugins/house-policies/skills/write-spec/"
       ]
     },
     {
@@ -22,7 +23,8 @@
         ".claude/",
         ".claude/skills/write-intent/",
         "REVIEW.md",
-        ".github/workflows/"
+        ".github/workflows/",
+        "plugins/house-policies/skills/write-spec/"
       ]
     },
     {

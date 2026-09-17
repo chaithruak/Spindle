@@ -65,6 +65,7 @@ Every first mistake earns a dated row in `docs/claude-mistakes.md`. The second t
 
 - Writing a Unicode escape (a byte-order mark, say) through a tool call: it can land in the file as the invisible character itself. Build such characters from their code, as `String.fromCharCode(0xfeff)`, and treat ESLint's irregular-whitespace error as this mistake.
 - Leaving new code unformatted. Run `npx prettier --write <files>` on what you wrote before `npm run lint`.
+- Staging with `git add -A` on a branch that has unrelated changes in the tree: it commits them too. Stage the paths you mean, and read `git show --stat` after committing rather than trusting the list you passed.
 - Writing a credential shape or a claude.ai share link into a test as a literal. The commit hook refuses the file. Assemble it from parts while the test runs.
 
 ## Browser work

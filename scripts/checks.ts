@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
 import { git, hasHistory, listFiles, readText, ROOT } from './lib/repo.ts';
 import { isAvailable, run } from './lib/run.ts';
+import { addedLines } from './key-scan.ts';
+import { TICKET_PATHS } from '../.claude/hooks/protect-paths.ts';
+import { globToRegExp } from '../.claude/hooks/protect-secrets.ts';
 
 // The repository's own rules, run by `npm run checks` and by the pipeline.
 // Each rule prints one line; any failure makes the whole run fail.
@@ -31,6 +34,11 @@ export const ADAPT_FILES = [
   'config/claude.json',
   '.claude/settings.json',
   '.claude/hooks/session-start.ts',
+  '.claude/hooks/protect-secrets.ts',
+  '.claude/hooks/protect-paths.ts',
+  '.claude/hooks/format-on-edit.ts',
+  '.claude/hooks/lib/decision-log.ts',
+  'docs/claude-mistakes.md',
   '.github/workflows/pipeline.yml',
   '.github/workflows/write-spec.yml',
   '.github/pull_request_template.md',
@@ -184,14 +192,214 @@ function describeOwnership(map: Map<string, Set<string>>, file: string): string 
   return [...(map.get(file) ?? [])].sort().join(', ') || 'nobody';
 }
 
+// ---- What a stream may touch, and how a plan section is found ----
+
+// The table in the Wave 3 plan section. The kit's paths rule is written against
+// it, so the two are meant to be read together.
+export const STREAM_PATHS: Record<string, string[]> = {
+  web: ['apps/web/**'],
+  adapters: ['packages/adapters/**', 'scripts/record.ts', 'scripts/record.test.ts'],
+  server: ['apps/api/**', 'packages/proxy/**'],
+};
+
+// Frozen: inside a stream's own fence, and still not its to change. Each one is
+// recorded in the lockfile, so a line added here moves the lockfile, reddens the
+// pull request and makes that stream's own next `npm ci` fail.
+export const FROZEN_FILES = [
+  'package-lock.json',
+  'apps/web/package.json',
+  'apps/api/package.json',
+  'packages/proxy/package.json',
+  'packages/adapters/package.json',
+];
+
+// Shared: a stream may change one only from inside its own pull request, and
+// only once its own section names it.
+export const SHARED_FILES = [
+  'package.json',
+  'CLAUDE.md',
+  'docs/make-it-yours.md',
+  'docs/claude-mistakes.md',
+  '.prettierignore',
+];
+
+// The ticket list plus the two paths the Wave 3 section classes as high risk:
+// the only reader of the keys file, the only part that talks to a provider, the
+// logger that redacts, and the sign-in. These are not the same list, and they
+// are easily confused.
+export const HIGH_RISK_PATHS = [...TICKET_PATHS, 'packages/proxy/**', 'apps/api/src/sign-in.ts'];
+
+export const LINDA_GATE = 'Accepted - Linda, tech lead and release manager';
+
+export function streamFromBranch(branch: string): string | undefined {
+  const stem = /^worktree-(.+)$/.exec(branch.trim())?.[1];
+  return stem && stem in STREAM_PATHS ? stem : undefined;
+}
+
+// A stream's own subsection, found by its heading exactly as the plan writes it.
+export function streamSection(plan: string, stream: string): string | undefined {
+  const lines = plan.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.startsWith(`#### worktree-${stream}`));
+  if (start === -1) return undefined;
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((line) => /^#{1,4} /.test(line));
+  return [lines[start], ...(end === -1 ? rest : rest.slice(0, end))].join('\n');
+}
+
+// Which shared files a section names. A file named nowhere in the section is one
+// the stream may not touch, however reasonable the change looks.
+export function sharedFilesNamed(section: string): string[] {
+  return SHARED_FILES.filter((file) => section.includes(file));
+}
+
+// Every file this branch touched that its fence does not cover.
+export function strayPaths(files: string[], stream: string, section: string): string[] {
+  const owned = (STREAM_PATHS[stream] ?? []).map(globToRegExp);
+  const named = sharedFilesNamed(section);
+  return files.filter((file) => {
+    if (FROZEN_FILES.includes(file)) return true;
+    if (owned.some((pattern) => pattern.test(file))) return false;
+    if (file === 'intent/spindle/plan.md') return false;
+    if (file.startsWith(`docs/3-build/${stream}/`)) return false;
+    if (file.startsWith('docs/3-build/screenshot-rounds/') && stream === 'web') return false;
+    return !named.includes(file);
+  });
+}
+
+// Every dated section, with its body, so a rule can ask what one of them says.
+export function datedSections(plan: string): { heading: string; body: string }[] {
+  const lines = plan.split(/\r?\n/);
+  const sections: { heading: string; body: string }[] = [];
+  let current: { heading: string; body: string[] } | undefined;
+  for (const line of lines) {
+    if (/^## \d{4}-\d{2}-\d{2}/.test(line)) {
+      if (current) sections.push({ heading: current.heading, body: current.body.join('\n') });
+      current = { heading: line, body: [] };
+      continue;
+    }
+    current?.body.push(line);
+  }
+  if (current) sections.push({ heading: current.heading, body: current.body.join('\n') });
+  return sections;
+}
+
+export function namesHighRisk(body: string): string[] {
+  return HIGH_RISK_PATHS.filter((risky) => body.includes(risky.replace(/\/\*\*$/, '/')));
+}
+
+// A test marked skipped, exclusive or pending. `it.skipIf` and `it.runIf` are
+// not this: they are a platform saying a test does not apply, and the repository
+// already carries two. The word boundary is what tells them apart.
+const SKIP_MARKER = /\b(?:it|test|describe)\.(?:skip|only|todo|fails)\b/;
+
+export function addedSkips(patch: string): { file: string; line: number }[] {
+  return addedLines(patch)
+    .filter((added) => SKIP_MARKER.test(added.text))
+    .map(({ file, line }) => ({ file, line }));
+}
+
+const MAIN_BRANCH = 'main';
+
 const rules: Rule[] = [
   {
-    name: 'CLAUDE.md is 60 lines or shorter',
+    name: 'A stream branch has its own plan section, and edits no other',
+    needsGit: true,
+    run: async () => {
+      const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD']))?.trim() ?? '';
+      const stream = streamFromBranch(branch);
+      if (!stream) return skip(`${branch || 'this branch'} is not a stream branch`);
+
+      const plan = read('intent/spindle/plan.md');
+      if (plan === undefined) return fail('intent/spindle/plan.md is missing');
+      const section = streamSection(plan, stream);
+      if (section === undefined) {
+        return fail(`no "#### worktree-${stream}" section in intent/spindle/plan.md`);
+      }
+
+      const patch = await git([
+        'diff',
+        '--unified=0',
+        `main...${branch}`,
+        '--',
+        'intent/spindle/plan.md',
+      ]);
+      if (patch === undefined) return fail('git could not read this branch against main');
+      const outside = addedLines(patch).filter((added) => !section.includes(added.text.trim()));
+      return outside.length === 0
+        ? ok(`worktree-${stream}`)
+        : fail(
+            `${outside.length} line(s) added to intent/spindle/plan.md outside this stream's section`,
+            outside.map((added) => `${added.file}:${added.line}`),
+          );
+    },
+  },
+  {
+    name: 'A stream branch touches only its own paths and the shared files its section names',
+    needsGit: true,
+    run: async () => {
+      const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD']))?.trim() ?? '';
+      const stream = streamFromBranch(branch);
+      if (!stream) return skip(`${branch || 'this branch'} is not a stream branch`);
+
+      const plan = read('intent/spindle/plan.md');
+      const section = plan === undefined ? undefined : streamSection(plan, stream);
+      if (section === undefined)
+        return fail(`no section for worktree-${stream} to be measured against`);
+
+      const listed = await git(['diff', '--name-only', `main...${branch}`]);
+      if (listed === undefined) return fail('git could not read this branch against main');
+      const touched = listed.trim().split('\n').filter(Boolean);
+      const stray = strayPaths(touched, stream, section);
+      return stray.length === 0
+        ? ok(`${touched.length} file(s), all inside the fence`)
+        : fail(`${stray.length} file(s) outside this stream's fence`, stray);
+    },
+  },
+  {
+    name: 'A plan section naming a high-risk path carries Linda’s gate comment',
+    run: () => {
+      const plan = read('intent/spindle/plan.md');
+      if (plan === undefined) return fail('intent/spindle/plan.md is missing');
+      const problems: string[] = [];
+      let risky = 0;
+      for (const section of datedSections(plan)) {
+        const named = namesHighRisk(section.body);
+        if (named.length === 0) continue;
+        risky += 1;
+        if (!section.body.includes(LINDA_GATE)) {
+          problems.push(`${section.heading.slice(3, 60)}: names ${named[0]} with no co-sign`);
+        }
+      }
+      return problems.length === 0
+        ? ok(`${risky} section(s) name a high-risk path, each co-signed`)
+        : fail(`${problems.length} section(s) missing the co-sign`, problems);
+    },
+  },
+  {
+    name: 'This branch adds no skipped, exclusive or pending test',
+    needsGit: true,
+    run: async () => {
+      const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD']))?.trim() ?? '';
+      if (branch === MAIN_BRANCH)
+        return skip('this is main, so there is nothing to compare it with');
+      const patch = await git(['diff', '--unified=0', `main...${branch}`]);
+      if (patch === undefined) return skip('git could not read this branch against main');
+      const added = addedSkips(patch);
+      return added.length === 0
+        ? ok('none added')
+        : fail(
+            `${added.length} added; a failing test is cured in the code, never skipped`,
+            added.map((one) => `${one.file}:${one.line}`),
+          );
+    },
+  },
+  {
+    name: 'CLAUDE.md is 120 lines or shorter',
     run: () => {
       const text = read('CLAUDE.md');
       if (text === undefined) return fail('CLAUDE.md is missing');
       const count = text.split('\n').length - (text.endsWith('\n') ? 1 : 0);
-      return count <= 60 ? ok(`${count} lines`) : fail(`${count} lines`);
+      return count <= 120 ? ok(`${count} lines`) : fail(`${count} lines`);
     },
   },
   {

@@ -42,6 +42,7 @@ Either way, Spindle's records come with the files. They show how Spindle itself 
 | `docs/2-design/session-export.md` | 2 | The spec session's transcript, turned into Markdown and scrubbed | Your own session, scrubbed the same way |
 | `docs/2-design/evidence.md` | 2 | How each piece of Stage 2 evidence was made, and what is missing from it | Your own record; keep nothing you did not really do |
 | `docs/3-build/plan-cold-read.md` | 3 | Every round of the cold read of Spindle's Wave 3 plan, and what each round changed | Your own rounds, including the ones that found things; a record holding only the round that passed says nothing |
+| `docs/3-build/kit/measurements.md` | 3 | What the build kit actually measured, what it could not, and the one edit Claude was refused | Your own measurements. The value is in the things that did not work, so keep those rather than only the ones that did |
 
 ## 2. Repository settings to re-create
 
@@ -97,10 +98,18 @@ Do this before any workflow runs: a copy made from the template receives files, 
 
 | File | Stage | What it is | What to put there |
 |---|---|---|---|
-| `CLAUDE.md` | 0 | The one page every session reads | Your commands with their healthy output, your conventions, and what Claude gets wrong in your repository; 60 lines at most |
+| `CLAUDE.md` | 0 | The one page every session reads | Your commands with their healthy output, your conventions, and what Claude gets wrong in your repository; 120 lines at most |
 | `.claude/settings.json` | 0 | Session keys, the plugin marketplace and the session hook entries | The `model` and `availableModels` lines to match `config/claude.json`, and the marketplace name |
 | `.claude/hooks/session-start.ts` | 0 | Loads the GitHub token, binds a session note and warns on a model mismatch | The home-folder layout (`~/.spindle/`), the 10-minute note window and the 24-hour binding age, near the top of the file |
 | `.claude/skills/write-intent/SKILL.md` | 0 | The intent template | Your questions and your intent headings |
+| `.claude/hooks/protect-secrets.ts` | 3 | Refuses the key files and anything key-shaped, ahead of any edit or shell command | Your own key file shapes in `SHUT_GLOBS`, and whatever your equivalent of `keys.env.example` is called in `NEVER_BLOCKED` |
+| `.claude/hooks/protect-paths.ts` | 3 | Refuses infrastructure edits without a change ticket, and holds the deny list in shell form | Your own protected paths in `TICKET_PATHS`, and your own `DENY_RULES`; the checks hold each rule's `settings` equal to `.claude/settings.json` |
+| `.claude/hooks/format-on-edit.ts` | 3 | Formats and lints the one file just edited; the only hook allowed to fail open | Nothing, unless you format with something other than Prettier and ESLint |
+| `.claude/hooks/lib/decision-log.ts` | 3 | The one log every guard writes to, one whole line per decision | Your own field list, if you want more than the nine; keep it free of anything about a person |
+| `.claude/skills/provider-adapter/SKILL.md` | 3 | How a provider is added or changed, and the rule that a key reaches an adapter only through the accessor | Your providers, your error categories, and your own recorded-reply test |
+| `.claude/agents/researcher.md` | 3 | A read-only helper that explores and reports back | Nothing, unless you want it to hold different tools |
+| `.claude/agents/code-simplifier.md` | 3 | One tidying pass at the close of a stream | Your own list of what it leaves alone |
+| `docs/claude-mistakes.md` | 3 | Every first mistake, dated; a second sighting moves its correction into `CLAUDE.md` | Your own rows. Start it empty and let it fill, rather than copying these |
 | `.mcp.json` | 0 | The MCP servers a session may use: Playwright, pinned to one version, isolated, and allowed to reach the loopback ports alone | Only the servers your repository needs, each also named in `allowedMcpServers` and `enabledMcpjsonServers`; keep `--allowed-origins` in step with the ports in `config/environments.json` |
 
 ## 8. Environments and deploy

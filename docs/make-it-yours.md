@@ -42,6 +42,7 @@ Either way, Spindle's records come with the files. They show how Spindle itself 
 | `docs/2-design/session-export.md` | 2 | The spec session's transcript, turned into Markdown and scrubbed | Your own session, scrubbed the same way |
 | `docs/2-design/evidence.md` | 2 | How each piece of Stage 2 evidence was made, and what is missing from it | Your own record; keep nothing you did not really do |
 | `docs/3-build/plan-cold-read.md` | 3 | Every round of the cold read of Spindle's Wave 3 plan, and what each round changed | Your own rounds, including the ones that found things; a record holding only the round that passed says nothing |
+| `docs/3-build/kit/measurements.md` | 3 | What the build kit actually measured, what it could not, and the one edit Claude was refused | Your own measurements. The value is in the things that did not work, so keep those rather than only the ones that did |
 
 ## 2. Repository settings to re-create
 

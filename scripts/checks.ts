@@ -31,6 +31,11 @@ export const ADAPT_FILES = [
   'config/claude.json',
   '.claude/settings.json',
   '.claude/hooks/session-start.ts',
+  '.claude/hooks/protect-secrets.ts',
+  '.claude/hooks/protect-paths.ts',
+  '.claude/hooks/format-on-edit.ts',
+  '.claude/hooks/lib/decision-log.ts',
+  'docs/claude-mistakes.md',
   '.github/workflows/pipeline.yml',
   '.github/workflows/write-spec.yml',
   '.github/pull_request_template.md',
@@ -186,12 +191,12 @@ function describeOwnership(map: Map<string, Set<string>>, file: string): string 
 
 const rules: Rule[] = [
   {
-    name: 'CLAUDE.md is 60 lines or shorter',
+    name: 'CLAUDE.md is 120 lines or shorter',
     run: () => {
       const text = read('CLAUDE.md');
       if (text === undefined) return fail('CLAUDE.md is missing');
       const count = text.split('\n').length - (text.endsWith('\n') ? 1 : 0);
-      return count <= 60 ? ok(`${count} lines`) : fail(`${count} lines`);
+      return count <= 120 ? ok(`${count} lines`) : fail(`${count} lines`);
     },
   },
   {

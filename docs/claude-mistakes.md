@@ -1,0 +1,12 @@
+# What Claude got wrong here
+
+Every first mistake earns a dated row below. The second time the same one shows up, its correction moves into `CLAUDE.md` in the same pull request, and that entry links back to the row here.
+
+The point of this file is not a tally. It is that a correction written into `CLAUDE.md` should be traceable to the thing that caused it, and that a session watching a mistake happen is the one best placed to write it down. Any stream may add rows for the mistakes it met, and nobody else's.
+
+| Date | What happened | What caught it | What was done |
+|---|---|---|---|
+| 2026-09-17 | A byte-order mark was written into `.claude/hooks/lib/decision-log.ts` as the invisible character itself, from a `﻿` escape typed into a tool call | ESLint's `no-irregular-whitespace`, on `npm run lint` | **Second sighting.** The correction was already in `CLAUDE.md` from Wave 0; this commit sharpened it to name `String.fromCharCode(0xfeff)` as the way to build such a character, which `scripts/measures.ts` was already doing |
+| 2026-09-17 | A claude.ai share link was written into `.claude/hooks/protect-secrets.test.ts` as a literal, to test that the guard recognises one | `scripts/key-scan.ts`, refusing the commit | The link is now assembled from parts while the test runs, as the fake tokens in `.claude/hooks/session-start.test.ts` already were. The correction is in `CLAUDE.md`, because the same shape of mistake had already been made once with a credential |
+| 2026-09-17 | The first `protect-paths.ts` anchored its network rule at the start of a command, so `sh -c "curl ..."` went straight past the guard whose whole reason for existing is that a deny rule cannot see inside `sh -c` | Its own test, written before the code was trusted | The guard now reads the head of every command, including the ones behind a wrapper or a quote. No `CLAUDE.md` line: it is a bug in one file, not a habit |
+| 2026-09-17 | `readText` in `scripts/lib/repo.ts` already resolves against the repository root, and `scripts/measures.ts` joined the root on again, so the path came out doubled | Running `npm run measures` rather than assuming it worked | Fixed in place. No `CLAUDE.md` line yet; if a second helper gets called this way, that is the second sighting and the rule moves |

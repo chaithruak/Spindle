@@ -2184,8 +2184,14 @@ carries the count as it is.
 
 - `npm test`, `npm run lint`, `npm run build`, `npm run checks` and
   `npm run wording-check` all pass. `npm run checks` gave
-  `10 passed, 0 failed, 0 skipped` on main and gives 16 after this commit, with
-  none failed and none skipped.
+  `10 passed, 0 failed, 0 skipped` on main and gives 16 rules after this commit,
+  with none failed. **Two of them skip off a stream branch**, and that is the
+  right answer rather than a gap: the plan-sync rule and the paths rule are both
+  written against a `worktree-<stem>` branch, so on `main` or on the kit's own
+  branch there is nothing for them to measure. They run, and must pass, on every
+  stream pull request. An earlier draft of this section promised none skipped;
+  that was a figure written before the rules existed, and it is corrected here
+  rather than met by having a rule report success for work it never did.
 - `npm run smoke` still prints its one line with no keys file present.
 - The test count rises, and no skipped, exclusive or pending test is added.
 - `npm ci` succeeds against the committed lockfile after `node_modules` is
@@ -2222,3 +2228,43 @@ Linda accepts this section when Linda agrees that:
 Acceptance is `Accepted - Linda, tech lead and release manager`, written by the
 owner before the first code file this section names, copied onto the header
 above, and written again as a comment on this commit's pull request.
+
+### Built differently from this section
+
+Recorded here as it happened, rather than tidied out of the section.
+
+1. **No change ticket**, as the section's own opening says. The owner was told
+   before any file was written and chose to carry on.
+2. **The leftover worktree's folder did not delete.** Git's record of
+   `.claude/worktrees/wave-3-build-kit-30b2fb` was removed and its branch
+   deleted, but the folder itself is held open by something and `rm` answered
+   "Device or resource busy". It is inert — git no longer registers it,
+   `.claude/worktrees/` is ignored, and `vitest`, `eslint`, `prettier` and
+   `scripts/lib/repo.ts` all exclude it — so it is left on disk and written down
+   rather than claimed as removed.
+3. **The early push bought nothing, and a draft pull request was opened
+   instead.** The order of work says the install is pushed at once so the
+   runner's verdict arrives early. It does not: `.github/workflows/pipeline.yml`
+   runs on `pull_request` and on pushes to `main`, so a pushed branch gets no run
+   at all. The draft was opened to get the verdict, and retitled for the gate
+   afterwards.
+4. **Decision 6 is settled: the store goes on `better-sqlite3`.** Version 13.0.3
+   installed with no native build step and opened an in-memory database on Node
+   24.16.0 on Windows. `node:sqlite` is not needed and stays the fallback.
+5. **The brief names a variable that does not exist.** Its deny list covers
+   "anything naming the release-approval or change-ticket variable". Wave 0 built
+   that mechanism on the session note and the binding, not on an environment
+   variable, and no such variable is anywhere in the repository. The deny rule
+   covers what does exist — the note, the bindings folder, and `SPINDLE_HOME` and
+   `SPINDLE_KEYS_FILE`, either of which could move both — and the discrepancy is
+   recorded rather than a name being invented to match the sentence.
+6. **The `provider-adapter` skill loaded without a session restart**, in the
+   session that wrote it. That matches what Wave 0 found for plugin skills and
+   extends it to a project skill.
+7. **Two of the six new checks rules skip off a stream branch.** See Proof above.
+8. **The settings wiring was refused to Claude.** The auto-mode classifier
+   declined the edit that adds the allow list, the deny list, the mode settings
+   and the guard entries, on the grounds that it widens Claude's own permissions
+   and changes its own approval gates. Wave 0 met the same refusal on a smaller
+   settings edit and `docs/0-setup/facts.md` records it. It is the owner's to
+   apply or to authorise, and nothing here worked around it.

@@ -1876,3 +1876,349 @@ here rather than tidied out of it, and more will be added as the wave runs.
    rather than after. The section is left as it stands, because the rule it sets
    is the right rule; this is a note that the rule was not kept on its first
    outing.
+
+---
+
+## 2026-09-17 — Wave 3, the build kit: the guards, the settings, the first engineering skill and two helper agents
+
+**Intent:** `intent/spindle/intent.md`, accepted 2026-09-15 by Rahul, product
+owner, on pull request #3.
+**Spec:** `intent/spindle/spec.md`, merged 2026-09-15 in `a04e46b`.
+**Record:** none.
+**Gate role for this section:** Linda, tech lead and release manager, because
+everything this commit builds sits under `.claude/`, which `.github/CODEOWNERS`
+and `config/roles.json` both give the tech lead.
+**Accepted:** 2026-09-17 — `Accepted - Linda, tech lead and release manager`,
+written by the owner in the kit session, before any code file this section names
+was written and before the pull request existed to hold it. Written again as a
+comment on this commit's pull request, which is where the gate ritual keeps its
+record.
+
+### Why this section exists
+
+The Wave 3 section above covers the three streams and commit 4. It says in as
+many words that it does **not** cover the kit, and why: the kit is what teaches
+the checks to police those three streams, and one section covering both would be
+planning the policeman and the traffic in the same breath. This is that second
+section.
+
+Nothing in Wave 3 proceeds past this commit. Three sessions are about to work at
+once on one repository; the kit is what stops them treading on each other, what
+stops any of them reaching a provider key, and what makes a stream's pull request
+turn red by itself when it strays outside its fence rather than relying on a
+reviewer's eye.
+
+### Built without a change ticket, which is a departure
+
+Brief §2 opens: "Start this session only after the owner has saved a change
+ticket as a session note (owner's turn 2), since it writes hooks and settings;
+its first reply names the ticket it holds." The session that wrote this commit
+held **no ticket**. The session-start hook reported `Session note: none saved` as
+it opened — the file-missing branch of `notePart`, not the too-old or malformed
+one — and a session cannot acquire a ticket after it has started, because the
+note is read once, at `SessionStart`, inside a ten-minute window.
+
+The owner was told before any file was written, was offered a two-minute restart
+that would have met the rule exactly, and chose to carry on. That is written here
+rather than tidied away, and three consequences follow, none of them hidden:
+
+1. **The rule was not kept on its first outing.** The rule is still the right
+   rule. `protect-paths.ts`, built in this very commit, is what will enforce it
+   from the next session onward.
+2. **Nothing mechanically stopped the work**, because the guards did not exist
+   yet. That is the honest reason it was possible, and it is exactly the gap this
+   commit closes.
+3. **The ticket mechanism is therefore still unproven end to end.**
+   `docs/0-setup/facts.md` carries an open row for a bound note, and this commit
+   does not close it. It is carried forward, not claimed.
+
+A likely explanation for the missing note is recorded because it bears on the
+mechanism: `notePart` **deletes** the note file the moment it binds. A worktree
+made at 14:55 on the same day, `claude/wave-3-build-kit-30b2fb` from
+`origin/main`, suggests an earlier session that bound the note and was then
+abandoned. If so the owner's turn worked and the note was simply consumed. That
+is inference, not measurement, and it is labelled as such.
+
+### What this commit holds
+
+Four guard files, the settings that wire them, the grown steering file, the first
+engineering skill, two helper agents, six new rules in the checks, the wave's
+four measures, and one dependency install that every stream depends on.
+
+### Files that change
+
+**The hooks.** All TypeScript, all run by Node with no build step, all failing
+closed except the formatter. Each is written with the test pattern
+`.claude/hooks/session-start.test.ts` already sets: the parts are exported and
+called directly with an injected `Deps`, scratch folders come from `mkdtempSync`,
+the clock is frozen, no child process is spawned, and any credential-shaped
+string in a test is assembled at run time so `scripts/key-scan.ts` does not
+refuse the test file itself.
+
+1. `.claude/hooks/lib/decision-log.ts` — new, and first, because the others
+   import it. One timestamped line per decision, written with a single append of
+   one whole line, into the main checkout's `.claude/logs/`. Each line carries
+   the time, the hook, the tool, the decision, the reason, the session id, then
+   the working folder or worktree, the branch, and the session's role label. The
+   label comes from the session's binding, or from the stream name in a stream
+   session. Git ignores the folder, and a copy reaches the evidence folder only
+   after the scrub.
+
+   **It holds nothing about a person.** It lives outside `data/<environment>/`,
+   so the compliance policy's retention does not reach it and the right answer is
+   that it never holds anything to retain: no key, no token, no cookie value, no
+   Authorization value, no chat text, no email address.
+
+   **It is also the only debugger this commit has.** The owner's
+   `.claude/settings.local.json` denies the session every route to its own
+   binding. When a guard refuses and nobody can see why, this log is the one
+   place that says which glob matched, which session id was looked up, and
+   whether a ticket was found.
+
+2. `.claude/hooks/protect-secrets.ts` — new. `PreToolUse`. Ahead of any edit or
+   shell command it stops key files and anything key-shaped from being read or
+   written, and its message names the proper route instead. The files it holds
+   shut are the Spindle home folder, `**/.env*`, `**/*.env` and `**/keys.env`.
+   `keys.env.example` is never blocked.
+
+   **It matches globs against tokens, never substrings against a command.**
+   `cat keys.env.example` contains the text `keys.env`; a substring test would
+   shut out the one file the spec points every newcomer at. The command is split
+   into tokens and each token is glob-matched, and the tests pin all four cases:
+   `keys.env.example` allowed, `keys.env`, `../keys.env` and the home-folder path
+   refused. This guards against mistakes, not against someone who sets out to
+   write the path in pieces, and saying so is more useful than implying otherwise.
+
+3. `.claude/hooks/protect-paths.ts` — new. `PreToolUse`. It refuses edits to the
+   recorded replies and to the nine protected globs unless the session holds a
+   change ticket, which it finds in the binding the session-start hook wrote
+   under the owner's home folder for this session id. It is also **the single
+   place the deny list exists in shell form**, read out of commands in either
+   shell, because a deny rule never sees what has been wrapped inside `sh -c`.
+
+4. `.claude/hooks/format-on-edit.ts` — new. `PostToolUse`. Once a file has been
+   edited it formats and lints that one file by calling the Prettier and ESLint
+   libraries straight. **The only hook permitted to fail open**, so that a tool
+   gone missing never stops anyone editing. `npm run lint` is the backstop and it
+   tolerates no warnings.
+
+**The settings.** `.claude/settings.json` gains the hook entries, the allow list,
+the deny list, bypass mode locked off, and plan mode as the mode every session
+opens in. Every entry declares Bash as its shell and runs the guard so that any
+non-zero result becomes a block.
+
+**The rest.**
+
+5. `.claude/skills/provider-adapter/SKILL.md` — new, carrying the example note,
+   with its row in `docs/make-it-yours.md` in this same commit.
+6. `.claude/agents/researcher.md` and `.claude/agents/code-simplifier.md` — new,
+   the first two files in a folder that does not exist today.
+7. `CLAUDE.md` — gains Architecture and a block on verification.
+8. `docs/claude-mistakes.md` — new, the fifth shared file the Wave 3 section
+   already asked for and the gate already settled.
+9. `scripts/checks.ts` — six new rules, and rule 1's cap moved.
+10. `scripts/measures.ts` and `scripts/measures.test.ts` — the wave's four
+    measures, which the Wave 3 section put here and in no stream.
+11. `docs/make-it-yours.md` — the rows every new example and adapt file needs.
+12. The four workspace manifests and `package-lock.json` — the one install.
+13. `docs/3-build/kit/` — this commit's records.
+
+### Decisions this section settles
+
+**1. The `CLAUDE.md` cap moves from 60 lines to 120, and that is a decision.**
+The file is 40 lines today and the checks cap it at 60. The block on verification
+the brief asks for is not description that can be trimmed — it is the build, the
+tests and the lint each with the line that means they are healthy; the lint
+tolerating no warnings; a failing test neither skipped nor deleted; whatever the
+tools really printed being what goes into the report; and a red test cured in the
+code rather than by rewriting the test. Architecture is four workspaces and what
+each one may not do. Compressed into twenty lines, either the new rules arrive as
+headings with the reasoning cut away, or the Commands list loses the healthy-
+output lines that make it worth having.
+
+So the cap moves, in the open, with the figure chosen to leave room for Wave 4's
+verifier line and not much else. The rule's **name** carries the figure —
+`CLAUDE.md is 60 lines or shorter` — so the name changes with it, or the checks
+print a line that lies about itself. The `docs/make-it-yours.md` row for
+`CLAUDE.md` ends "60 lines at most" and changes in the same commit.
+
+The alternative, not taken: leave the cap at 60 and move Architecture and
+verification into a longer page under `docs/` that `CLAUDE.md` points at. Rejected
+because the rules that most change what a session does would then sit in a file
+no session is obliged to read.
+
+**2. `npm ci` joins the allow list as one more exact command.** The Wave 3
+section asks for it and the reason is its own: no stream may run `npm install`,
+every stream must run `npm ci` in its worktree, and without the rule no stream can
+run a test before opening a pull request.
+
+**3. The `provider-adapter` skill gets no row of its own in `config/roles.json`.**
+The checks rule at `scripts/checks.ts` compares `config/roles.json` against
+`.github/CODEOWNERS` both ways and then demands a `docs/how-we-work.md` signers
+row for any `roles.json`-owned path containing `skills/`. `/.claude/` already
+gives this skill to the tech lead in both files, so a narrower row buys nothing
+and forces an entry into a table that holds policy and template signatures.
+`.claude/skills/write-intent/` has its own row only because two roles sign it,
+which is a different case. Linda settles this at the gate.
+
+**4. The decision log is proved to survive concurrent writers, or it is not
+claimed.** Four sessions will append to one file from separate Node processes on
+Windows, and a half-written log is worse than none because it looks complete. One
+append of one whole line is the mitigation. The proof runs with more than one
+session open, and it does not run in the session that wrote the code.
+
+**5. Three things this commit measures rather than asserts.** Each is a fact
+`docs/0-setup/facts.md` does not hold, and standing rule 7 says the record carries
+what actually took place.
+
+- **Whether `PreToolUse` fires at all in a desktop session.** It has never been
+  seen. Wave 0 offered `Stop`, `SessionStart` and `PreToolUse` hooks to headless
+  runs three separate ways and none fired; the later clean test showed
+  `SessionStart` firing and `Stop` not. In the app only `SessionStart` has been
+  observed. All three guards here are `PreToolUse`. If it does not fire, this
+  commit is theatre and the wave stops rather than opening three streams behind a
+  guard nobody has seen work.
+- **Whether `CLAUDE_PROJECT_DIR` stays at the main checkout inside a worktree.**
+  Wave 3's Risk 4 depends on it: it is what puts every stream's log line in one
+  file and lets `protect-paths.ts` find the bindings folder. Proved by attempting
+  a blocked edit from inside a worktree, before any stream opens.
+- **Whether hook wiring takes effect mid-session or only at session start.** If
+  the wiring is snapshotted at startup, the session that writes the guards cannot
+  exercise them, and the deliberate attempts need sessions of their own. Measured
+  by attempting one protected edit immediately after the wiring lands.
+
+**6. `better-sqlite3` is installed, and which of the two the store ended up on is
+written down.** It is a native module that compiles or fetches a prebuilt binary
+on Windows and on the Linux runner both. The fallback is Node 24's own
+`node:sqlite`, which needs no package at all. This commit is where the install
+happens, so this commit finds out.
+
+**7. The brief's count of self-loading skills is right, and its count of typed
+ones is not.** Spindle holds five skills that load on their own — `brand`,
+`compliance`, `security`, `ux` and `write-intent` — and one that does not:
+`write-spec`, whose own description says it "Runs only when a person types it by
+name, or when the spec job on GitHub runs it; never start it on your own
+judgement." `provider-adapter` is the sixth, and it arrives with this commit, so
+the brief's six is right only because this commit lands. The brief also says
+"the four typed skills are left out". **There is one, not four.** The record
+carries the count as it is.
+
+### Order of work
+
+1. This section, and the owner's acceptance of it, before any other file.
+2. The one install, on its own, pushed at once — so the runner's verdict on the
+   native module arrives while the rest is still being written, and so a failure
+   is one revert rather than an excavation.
+3. `decision-log.ts` and its tests.
+4. The three hooks and their tests, **unwired**.
+5. The four measures.
+6. The prose: `CLAUDE.md`, `docs/claude-mistakes.md`, the skill, the two agents,
+   and every guide row in the same commit as the file that needs it.
+7. `.claude/settings.json`: the wiring, the allow list, the deny list, bypass off.
+   This is the point of no return, and everything before it is already pushed.
+8. The new checks rules, now that every subject they police exists.
+9. The deliberate attempts, in sessions of their own, and their records.
+
+### Risks
+
+1. **`PreToolUse` may not fire in the app.** Never measured here. Decision 5
+   covers it, and the wave stops rather than pretending.
+2. **A session can lock itself out of `.claude/`.** Once the wiring lands, a
+   missing binding, a session id that does not match, or a hook that throws means
+   the session refuses its own edits — including the edit that would fix it, and
+   including the shell command, because `protect-paths.ts` reads commands too.
+   There is no in-session recovery and that is deliberate. The recovery is the
+   owner's own shell outside the app, and it heals the running session on its
+   next tool call, because the guard script is read fresh on every invocation.
+   **The guard's refusal message prints that recovery line.**
+3. **A `settings.json` that does not parse loads no hooks at all**, and fails
+   open where every hook fails closed. No hook can close that, so a checks rule
+   does: the file parses, carries every guard entry, each with its shell field,
+   each `PreToolUse` command ending in the guard clause and the one `PostToolUse`
+   command ending in its fail-open twin.
+4. **A guard that fails closed can stop the build it guards.** The shapes are
+   exact, `keys.env.example` is never blocked, and the attempts prove both
+   directions — the refusal, and an ordinary edit going through untouched.
+5. **The owner's own deny list will confound the deliberate attempts.**
+   `.claude/settings.local.json` already denies reading and editing the Spindle
+   home folder and any Bash command naming it. A refused read of the keys file may
+   have been refused by the permission layer before the hook ever ran, and the
+   evidence would prove nothing. The decision log is what tells the two apart: a
+   log line means the hook saw the call.
+6. **That same deny refuses the commands that describe this work.** A pull
+   request body or a commit message naming the guarded paths is itself a command
+   naming them. The body goes in a file and is passed by file; test names are
+   built from parts rather than written as literals, exactly as
+   `session-start.test.ts` already does for its fake token.
+7. **The lockfile must stop moving before any stream opens.** One install, every
+   workspace's dependency block final, every `@types` package in the same pass —
+   because `npm run build` typechecks every workspace and no stream is permitted
+   to move the lockfile to add one.
+8. **`defaultMode` is a default, not a control.** Wave 0 measured the app's mode
+   selector beating project settings, and a mid-session write of it not applying
+   to that session. It is committed as a statement of intent and nothing here
+   counts it as enforcement.
+
+### Alternatives not taken
+
+1. **Guards as deny rules alone, with no hooks.** Rejected: a deny rule never
+   sees what has been wrapped inside `sh -c`, which is the whole reason
+   `protect-paths.ts` carries the shell form of the list itself.
+2. **One combined guard file.** Rejected: the secrets rule and the paths rule
+   fail for different reasons and want different messages, and a single file
+   would make every key refusal and every infrastructure refusal share one
+   blast radius.
+3. **Letting the formatter fail closed like the others.** Rejected, and the Wave
+   3 section already said why: a Prettier gone missing would stop anyone editing,
+   and the backstop that actually matters is `npm run lint` with no warnings
+   tolerated.
+4. **Teaching `session-start.ts` to re-mint a binding on `resume`, `clear`,
+   `compact` and `fork`.** Real: `/clear` fires SessionEnd, the binding is
+   deleted, and the next start carries a source the note entry's matcher does not
+   cover — so a ticketed session silently becomes ticketless and looks identical.
+   Not taken here because it edits a Wave 0 file this commit has no other reason
+   to open. `CLAUDE.md` gains the rule instead, and the gap is named rather than
+   closed.
+
+### Proof
+
+- `npm test`, `npm run lint`, `npm run build`, `npm run checks` and
+  `npm run wording-check` all pass. `npm run checks` gave
+  `10 passed, 0 failed, 0 skipped` on main and gives 16 after this commit, with
+  none failed and none skipped.
+- `npm run smoke` still prints its one line with no keys file present.
+- The test count rises, and no skipped, exclusive or pending test is added.
+- `npm ci` succeeds against the committed lockfile after `node_modules` is
+  deleted, which is what every stream will do and what proves the manifests and
+  the lockfile agree.
+- `npm run measures` prints a figure or a stated reason for each of the four new
+  measures.
+- The three measurements under decision 5 are recorded in `docs/3-build/kit/`
+  with what actually happened, including an answer that contradicts what this
+  section expects.
+- Each deliberate attempt is recorded with its refusal and its decision-log line,
+  and the log is shown to have survived two sessions writing at once.
+
+### What acceptance means
+
+Linda accepts this section when Linda agrees that:
+
+- the `CLAUDE.md` cap moving to 120 is the right call and the reason above is the
+  real one;
+- three guards that fail closed and one formatter that fails open is the right
+  split, and that the recovery from a self-lockout being the owner's own shell
+  outside the app is acceptable rather than a defect;
+- the deny list as written closes the Bash route to the session env file, which
+  Wave 0 left open and named Wave 3 as the closer of;
+- `npm ci` in the allow list and no `npm install` anywhere is the rule the
+  streams work under;
+- the skill needs no signers row, or that it does and all three files change
+  together;
+- the three things under decision 5 are measured before a stream opens, and the
+  wave stops if `PreToolUse` does not fire;
+- and that this commit was built without a change ticket, which is a departure
+  from brief §2, recorded above rather than tidied away.
+
+Acceptance is `Accepted - Linda, tech lead and release manager`, written by the
+owner before the first code file this section names, copied onto the header
+above, and written again as a comment on this commit's pull request.

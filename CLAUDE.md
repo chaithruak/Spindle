@@ -63,7 +63,7 @@ Nothing counts as done until the build, the tests and the lint have all been run
 
 Every first mistake earns a dated row in `docs/claude-mistakes.md`. The second time the same one appears, its correction moves here, in the same pull request, linking back to the row.
 
-- Writing a Unicode escape (a byte-order mark, say) through a tool call: it can land in the file as the invisible character itself. Build such characters from their code, as `String.fromCharCode(0xfeff)`, and treat ESLint's irregular-whitespace error as this mistake.
+- Writing a Unicode escape (a byte-order mark, say) through a tool call: it can land in the file as the invisible character itself. This happens in **any** file, not only TypeScript, and prose explaining the character is the likeliest place to write one. Build such characters from their code, as `String.fromCharCode(0xfeff)`. ESLint's irregular-whitespace error catches it in code and nothing catches it in Markdown, so sweep for the bytes before committing prose about it.
 - Leaving new code unformatted. Run `npx prettier --write <files>` on what you wrote before `npm run lint`.
 - Staging with `git add -A` on a branch that has unrelated changes in the tree: it commits them too. Stage the paths you mean, and read `git show --stat` after committing rather than trusting the list you passed.
 - Writing a credential shape or a claude.ai share link into a test as a literal. The commit hook refuses the file. Assemble it from parts while the test runs.

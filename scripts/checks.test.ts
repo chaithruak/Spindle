@@ -149,7 +149,17 @@ describe('addedSkips', () => {
     ].join('\n');
 
   it('catches a test marked skipped, exclusive or pending', () => {
-    for (const marker of ['it.skip(', 'test.only(', 'describe.skip(', 'it.todo(']) {
+    // Built from parts, so this file does not trip the very rule it is testing.
+    // `.claude/hooks/session-start.test.ts` assembles its fake token for the
+    // same reason, against a different guard.
+    const markers = [
+      ['it', 'skip'],
+      ['test', 'only'],
+      ['describe', 'skip'],
+      ['it', 'todo'],
+    ].map(([fn, mode]) => `${fn}.${mode}(`);
+
+    for (const marker of markers) {
       expect(addedSkips(patch(`  ${marker}'x', () => {});`)), marker).toHaveLength(1);
     }
   });

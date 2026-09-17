@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  fetchWorkflowRuns,
+  firstRunBySha,
+  planSections,
+  tallyFirstTimeGreen,
   editsAfter,
   fetchClosedPulls,
   formatDuration,
@@ -124,8 +128,8 @@ describe('the repository behind a remote', () => {
   });
 });
 
-const pull = (ref: string, merged: boolean): ClosedPull => ({
-  head: { ref },
+const pull = (ref: string, merged: boolean, sha = `sha-${ref}`): ClosedPull => ({
+  head: { ref, sha },
   merged_at: merged ? '2026-09-15T21:29:16Z' : null,
 });
 
@@ -182,6 +186,107 @@ describe('reading closed pull requests from GitHub', () => {
     };
     expect(await fetchClosedPulls('example-owner', 'Spindle', fakeFetch)).toEqual({
       error: 'GitHub could not be reached (offline)',
+    });
+  });
+});
+
+describe("Wave 3's four measures", () => {
+  describe('planSections', () => {
+    const plan = [
+      '## 2026-09-14 — Wave 0, commit 1: the empty house',
+      '',
+      '**Record:** none.',
+      '**Accepted:** 2026-09-15 — `Accepted - Linda, tech lead and release manager`,',
+      'written by the owner.',
+      '',
+      '## 2026-09-17 — Wave 3, the build kit',
+      '',
+      '**Accepted:** _pending._',
+      '',
+      '## 2026-09-18 — something never accepted',
+      '',
+      'No gate line at all.',
+    ].join('\n');
+
+    it('finds every dated section, whichever dash its heading used', () => {
+      expect(planSections(plan).map((section) => section.dated)).toEqual([
+        '2026-09-14',
+        '2026-09-17',
+        '2026-09-18',
+      ]);
+    });
+
+    it('takes the acceptance date only where one was written', () => {
+      const [first, second, third] = planSections(plan);
+      expect(first?.accepted).toBe('2026-09-15');
+      expect(second?.accepted).toBeUndefined();
+      expect(third?.accepted).toBeUndefined();
+    });
+
+    it('keeps the first acceptance line and ignores a later one in the same section', () => {
+      const twice = ['## 2026-09-14 — one', '**Accepted:** 2026-09-15', '**Accepted:** 2026-09-16'];
+      expect(planSections(twice.join('\n'))[0]?.accepted).toBe('2026-09-15');
+    });
+  });
+
+  describe('firstRunBySha', () => {
+    it('keeps the earliest run for a commit, so a green rerun cannot rewrite history', () => {
+      const runs = [
+        { head_sha: 'aaa', conclusion: 'success', run_number: 9 },
+        { head_sha: 'aaa', conclusion: 'failure', run_number: 4 },
+        { head_sha: 'bbb', conclusion: 'success', run_number: 5 },
+      ];
+      const first = firstRunBySha(runs);
+      expect(first.get('aaa')?.conclusion).toBe('failure');
+      expect(first.get('bbb')?.conclusion).toBe('success');
+    });
+  });
+
+  describe('tallyFirstTimeGreen', () => {
+    it('counts merged pull requests whose own first run was green', () => {
+      const pulls = [pull('a', true, 'aaa'), pull('b', true, 'bbb'), pull('c', false, 'ccc')];
+      const runs = firstRunBySha([
+        { head_sha: 'aaa', conclusion: 'success', run_number: 1 },
+        { head_sha: 'bbb', conclusion: 'failure', run_number: 1 },
+        { head_sha: 'ccc', conclusion: 'failure', run_number: 1 },
+      ]);
+      expect(tallyFirstTimeGreen(pulls, runs)).toEqual({ green: 1, counted: 2, unseen: 0 });
+    });
+
+    it('counts a merge with no run neither way, and says how many those were', () => {
+      const pulls = [pull('a', true, 'aaa'), pull('b', true, 'bbb')];
+      const runs = firstRunBySha([{ head_sha: 'aaa', conclusion: 'success', run_number: 1 }]);
+      expect(tallyFirstTimeGreen(pulls, runs)).toEqual({ green: 1, counted: 1, unseen: 1 });
+    });
+
+    it('counts a run still going as unseen rather than as a failure', () => {
+      const runs = firstRunBySha([{ head_sha: 'aaa', conclusion: null, run_number: 1 }]);
+      expect(tallyFirstTimeGreen([pull('a', true, 'aaa')], runs)).toEqual({
+        green: 0,
+        counted: 0,
+        unseen: 1,
+      });
+    });
+  });
+
+  describe('fetchWorkflowRuns', () => {
+    it('reads the runs out of the answer and stops on a short page', async () => {
+      const fetchImpl = async () =>
+        new Response(
+          JSON.stringify({
+            workflow_runs: [{ head_sha: 'aaa', conclusion: 'success', run_number: 1 }],
+          }),
+          { status: 200 },
+        );
+      const result = await fetchWorkflowRuns('owner', 'repo', fetchImpl);
+      expect(result).toEqual({ runs: [{ head_sha: 'aaa', conclusion: 'success', run_number: 1 }] });
+    });
+
+    it('says what went wrong rather than throwing', async () => {
+      const refused = async () => new Response('no', { status: 403 });
+      expect(await fetchWorkflowRuns('owner', 'repo', refused)).toEqual({
+        error: 'GitHub answered 403',
+      });
     });
   });
 });
